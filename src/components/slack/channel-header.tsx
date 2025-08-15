@@ -6,12 +6,15 @@ import { Channel } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from './user-avatar';
 import { Separator } from '@/components/ui/separator';
+import { useRightPane } from '@/hooks/use-right-pane.tsx';
 
 interface ChannelHeaderProps {
   conversation: Channel | User | undefined;
 }
 
 export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
+  const { setOpen } = useRightPane();
+
   if (!conversation) {
     return <div className="flex h-16 shrink-0 items-center border-b px-6">Loading...</div>; // Or a skeleton loader
   }
@@ -48,7 +51,7 @@ export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
           <Phone className="h-5 w-5" />
         </Button>
         <Separator orientation="vertical" className="h-6" />
-        <Button variant="ghost" size="icon" aria-label="View conversation details">
+        <Button variant="ghost" size="icon" aria-label="View conversation details" onClick={() => setOpen(true)}>
           <Info className="h-5 w-5" />
         </Button>
       </div>

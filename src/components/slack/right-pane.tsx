@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Channel } from '@/lib/types';
 import { UserAvatar } from './user-avatar';
 import { ScrollArea } from '../ui/scroll-area';
+import { useEffect } from 'react';
+import { useRightPane } from '@/hooks/use-right-pane.tsx';
 
 interface RightPaneProps {
   isOpen: boolean;
@@ -19,19 +21,27 @@ interface RightPaneProps {
 }
 
 export default function RightPane({ isOpen, onClose, conversation, users, children }: RightPaneProps) {
+  const { setContent } = useRightPane();
   const isChannel = conversation && 'isPrivate' in conversation;
   const isUser = conversation && !('isPrivate' in conversation);
+
+  useEffect(() => {
+    if (isChannel) {
+        const channel = conversation as Channel;
+        const members = users.filter(u => channel.members.includes(u.id));
+        setContent(<ChannelDetailsPane channel={channel} members={members} />)
+    } else if (isUser) {
+        setContent(<UserDetailsPane user={conversation as User} />)
+    } else {
+        setContent(<div className="p-4 text-sm text-muted-foreground">Select a conversation to see details.</div>);
+    }
+  }, [conversation, isChannel, isUser, setContent, users]);
+
 
   const getTitle = () => {
     if (isChannel) return `About #${(conversation as Channel).name}`;
     if (isUser) return 'Profile';
     return 'Details';
-  }
-
-  const getChannelMembers = () => {
-    if (!isChannel) return [];
-    const channel = conversation as Channel;
-    return users.filter(u => channel.members.includes(u.id));
   }
 
   return (
@@ -55,7 +65,7 @@ export default function RightPane({ isOpen, onClose, conversation, users, childr
             <Separator />
             <ScrollArea className="flex-1">
               {isChannel && (
-                <ChannelDetailsPane channel={conversation as Channel} members={getChannelMembers()} />
+                <ChannelDetailsPane channel={conversation as Channel} members={users.filter(u => (conversation as Channel).members.includes(u.id))} />
               )}
               {isUser && (
                 <UserDetailsPane user={conversation as User} />
