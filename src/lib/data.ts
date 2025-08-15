@@ -13,8 +13,8 @@ export const users: User[] = [
 ];
 
 export const workspaces: Workspace[] = [
-  { id: '1', name: 'Product Team', logoUrl: 'https://placehold.co/40x40/76D9D1/3F3D56?text=P' },
-  { id: '2', name: 'Marketing', logoUrl: 'https://placehold.co/40x40/3F3D56/FFFFFF?text=M' },
+  { id: '1', name: 'Product Team', logoUrl: 'https://placehold.co/40x40.png' },
+  { id: '2', name: 'Marketing', logoUrl: 'https://placehold.co/40x40.png' },
 ];
 
 export const channels: Channel[] = [

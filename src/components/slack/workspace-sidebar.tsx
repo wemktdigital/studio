@@ -19,7 +19,7 @@ export default function WorkspaceSidebar({ workspaces, activeWorkspaceId }: Work
   return (
     <TooltipProvider>
       <div
-        className="flex h-full w-20 flex-col items-center gap-2 overflow-y-auto bg-background p-3"
+        className="flex h-full w-20 flex-col items-center gap-2 overflow-y-auto bg-sidebar p-3"
         data-testid="workspace-sidebar"
       >
         <nav className="flex flex-col items-center gap-2">
