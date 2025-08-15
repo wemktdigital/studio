@@ -16,22 +16,33 @@ const statusClasses: Record<UserStatus, string> = {
   away: 'bg-yellow-500',
 };
 
+const statusSizeClasses: Record<string, string> = {
+  'h-5': 'h-2 w-2 bottom-0 right-0',
+  'h-9': 'h-3 w-3 bottom-0 right-0',
+  'h-10': 'h-3 w-3 bottom-0 right-0',
+  'h-24': 'h-6 w-6 bottom-2 right-2',
+}
+
 export function UserAvatar({ user, className, showName = false }: UserAvatarProps) {
+  const sizeClass = className?.split(' ').find(cls => cls.startsWith('h-')) || 'h-9';
+  const statusPositionClass = statusSizeClasses[sizeClass] || 'h-3 w-3 bottom-0 right-0';
+
   return (
-    <div className="flex items-center gap-2" data-testid={`user-avatar-${user.id}`}>
-      <div className="relative">
+    <div className={cn("flex items-center gap-2", showName && 'w-full')} data-testid={`user-avatar-${user.id}`}>
+      <div className="relative shrink-0">
         <Avatar className={cn('h-9 w-9', className)}>
           <AvatarImage src={user.avatarUrl} alt={user.displayName} />
           <AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback>
         </Avatar>
         <div
           className={cn(
-            'absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background',
-            statusClasses[user.status]
+            'absolute rounded-full border-2 border-background',
+            statusClasses[user.status],
+            statusPositionClass
           )}
         />
       </div>
-      {showName && <span className="font-medium">{user.displayName}</span>}
+      {showName && <span className="font-medium truncate">{user.displayName}</span>}
     </div>
   );
 }
