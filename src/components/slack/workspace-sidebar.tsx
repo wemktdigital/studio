@@ -29,10 +29,8 @@ export default function WorkspaceSidebar({ workspaces, activeWorkspaceId }: Work
                 <Link href={`/w/${ws.id}`}>
                   <div
                     className={cn(
-                      'relative flex h-12 w-12 items-center justify-center rounded-xl bg-muted transition-all duration-200 hover:rounded-2xl',
-                      activeWorkspaceId === ws.id
-                        ? 'rounded-2xl bg-primary text-primary-foreground'
-                        : 'hover:bg-primary/20'
+                      'relative flex h-12 w-12 items-center justify-center rounded-xl bg-sidebar-accent transition-all duration-200 hover:bg-sidebar-accent/80',
+                       activeWorkspaceId === ws.id && 'bg-primary-foreground'
                     )}
                   >
                     <Image
@@ -40,12 +38,9 @@ export default function WorkspaceSidebar({ workspaces, activeWorkspaceId }: Work
                       alt={`${ws.name} logo`}
                       width={40}
                       height={40}
-                      className="rounded-lg"
-                    />
-                    <div
                       className={cn(
-                        'absolute -left-2 top-1/2 h-2 w-1 -translate-y-1/2 rounded-r-full bg-foreground transition-all duration-200',
-                        activeWorkspaceId === ws.id ? 'h-8' : 'h-0 group-hover:h-4'
+                        'rounded-lg transition-all duration-200',
+                         activeWorkspaceId === ws.id ? 'transform scale-90' : ''
                       )}
                     />
                   </div>
@@ -60,7 +55,7 @@ export default function WorkspaceSidebar({ workspaces, activeWorkspaceId }: Work
         
         <Tooltip delayDuration={0}>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="mt-2 h-12 w-12 rounded-2xl bg-muted hover:bg-green-500/20 hover:text-green-500" aria-label="Create workspace">
+            <Button variant="ghost" size="icon" className="mt-2 h-12 w-12 rounded-2xl bg-sidebar-accent hover:bg-green-500/20 hover:text-green-500" aria-label="Create workspace">
               <Plus className="h-6 w-6" />
             </Button>
           </TooltipTrigger>
