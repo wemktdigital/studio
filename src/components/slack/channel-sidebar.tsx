@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -65,15 +66,17 @@ export default function ChannelSidebar({
           </SidebarNav>
 
           <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
-              <div className="flex items-center gap-1">
-                <ChevronDown className="h-4 w-4" />
-                <span>Channels</span>
-              </div>
+            <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+              <CollapsibleTrigger asChild>
+                <div className="flex flex-1 cursor-pointer items-center gap-1">
+                  <ChevronDown className="h-4 w-4" />
+                  <span>Channels</span>
+                </div>
+              </CollapsibleTrigger>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Plus className="h-4 w-4" />
               </Button>
-            </CollapsibleTrigger>
+            </div>
             <CollapsibleContent className="mt-2 flex flex-col gap-1">
               {channels.map((channel) => (
                 <SidebarLink
@@ -90,15 +93,17 @@ export default function ChannelSidebar({
           </Collapsible>
 
           <Collapsible defaultOpen>
-            <CollapsibleTrigger className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
-              <div className="flex items-center gap-1">
-                <ChevronDown className="h-4 w-4" />
-                <span>Direct Messages</span>
-              </div>
+             <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+              <CollapsibleTrigger asChild>
+                <div className="flex flex-1 cursor-pointer items-center gap-1">
+                  <ChevronDown className="h-4 w-4" />
+                  <span>Direct Messages</span>
+                </div>
+              </CollapsibleTrigger>
               <Button variant="ghost" size="icon" className="h-6 w-6">
                 <Plus className="h-4 w-4" />
               </Button>
-            </CollapsibleTrigger>
+            </div>
             <CollapsibleContent className="mt-2 flex flex-col gap-1">
               {dms.map((dm) => {
                 const user = users.find((u) => u.id === dm.userId);
