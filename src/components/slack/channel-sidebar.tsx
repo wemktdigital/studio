@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronsUpDown, Dot, Hash, Lock, Plus, Search, MessageSquare, AtSign, Braces } from 'lucide-react';
 
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AddChannelDialog } from './add-channel-dialog';
 
 interface ChannelSidebarProps {
   workspace: Workspace;
@@ -36,100 +37,114 @@ export default function ChannelSidebar({
   params,
 }: ChannelSidebarProps) {
   const currentUser = users.find(u => u.id === '1'); // Mock current user
+  const [isAddChannelOpen, setAddChannelOpen] = useState(false);
+
+  const handleAddChannel = (data: { name: string; description?: string; isPrivate: boolean }) => {
+    // TODO: Implement actual channel creation logic
+    console.log('Creating channel:', data);
+    setAddChannelOpen(false);
+  };
 
   return (
-    <div
-      className="flex h-full w-72 flex-col bg-muted/80 text-foreground"
-      data-testid="channel-sidebar"
-    >
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex w-full items-center justify-between p-4 shadow-sm transition-colors hover:bg-muted">
-            <h1 className="text-xl font-bold">{workspace.name}</h1>
-            <ChevronsUpDown className="h-5 w-5 opacity-50" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64">
-          <DropdownMenuItem>Workspace Settings</DropdownMenuItem>
-          <DropdownMenuItem>Invite People</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Create a new Workspace</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <>
+      <AddChannelDialog
+        isOpen={isAddChannelOpen}
+        onOpenChange={setAddChannelOpen}
+        onSubmit={handleAddChannel}
+      />
+      <div
+        className="flex h-full w-72 flex-col bg-muted/80 text-foreground"
+        data-testid="channel-sidebar"
+      >
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex w-full items-center justify-between p-4 shadow-sm transition-colors hover:bg-muted">
+              <h1 className="text-xl font-bold">{workspace.name}</h1>
+              <ChevronsUpDown className="h-5 w-5 opacity-50" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64">
+            <DropdownMenuItem>Workspace Settings</DropdownMenuItem>
+            <DropdownMenuItem>Invite People</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem>Create a new Workspace</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-      <ScrollArea className="flex-1 px-2">
-        <div className="flex flex-col gap-4 py-4">
-          <SidebarNav>
-            <SidebarNavItem icon={MessageSquare} label="Threads" href={`/w/${params.workspaceId}/threads`} />
-            <SidebarNavItem icon={AtSign} label="Mentions" href={`/w/${params.workspaceId}/mentions`} />
-            <SidebarNavItem icon={Braces} label="Drafts" href={`/w/${params.workspaceId}/drafts`} />
-          </SidebarNav>
+        <ScrollArea className="flex-1 px-2">
+          <div className="flex flex-col gap-4 py-4">
+            <SidebarNav>
+              <SidebarNavItem icon={MessageSquare} label="Threads" href={`/w/${params.workspaceId}/threads`} />
+              <SidebarNavItem icon={AtSign} label="Mentions" href={`/w/${params.workspaceId}/mentions`} />
+              <SidebarNavItem icon={Braces} label="Drafts" href={`/w/${params.workspaceId}/drafts`} />
+            </SidebarNav>
 
-          <Collapsible defaultOpen>
-            <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
-              <CollapsibleTrigger asChild>
-                <div className="flex flex-1 cursor-pointer items-center gap-1">
-                  <ChevronDown className="h-4 w-4" />
-                  <span>Channels</span>
-                </div>
-              </CollapsibleTrigger>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <CollapsibleContent className="mt-2 flex flex-col gap-1">
-              {channels.map((channel) => (
-                <SidebarLink
-                  key={channel.id}
-                  href={`/w/${params.workspaceId}/c/${channel.id}`}
-                  label={channel.name}
-                  icon={channel.isPrivate ? Lock : Hash}
-                  isActive={params.channelId === channel.id}
-                  isUnread={channel.unreadCount > 0}
-                  badgeCount={channel.unreadCount}
-                />
-              ))}
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Collapsible defaultOpen>
-             <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
-              <CollapsibleTrigger asChild>
-                <div className="flex flex-1 cursor-pointer items-center gap-1">
-                  <ChevronDown className="h-4 w-4" />
-                  <span>Direct Messages</span>
-                </div>
-              </CollapsibleTrigger>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <CollapsibleContent className="mt-2 flex flex-col gap-1">
-              {dms.map((dm) => {
-                const user = users.find((u) => u.id === dm.userId);
-                if (!user) return null;
-                return (
+            <Collapsible defaultOpen>
+              <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+                <CollapsibleTrigger asChild>
+                  <div className="flex flex-1 cursor-pointer items-center gap-1">
+                    <ChevronDown className="h-4 w-4" />
+                    <span>Channels</span>
+                  </div>
+                </CollapsibleTrigger>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAddChannelOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <CollapsibleContent className="mt-2 flex flex-col gap-1">
+                {channels.map((channel) => (
                   <SidebarLink
-                    key={dm.id}
-                    href={`/w/${params.workspaceId}/dm/${dm.userId}`}
-                    label={user.displayName}
-                    icon={<UserAvatar user={user} className="h-5 w-5" />}
-                    isActive={params.userId === dm.userId}
-                    isUnread={dm.unreadCount > 0}
-                    badgeCount={dm.unreadCount}
+                    key={channel.id}
+                    href={`/w/${params.workspaceId}/c/${channel.id}`}
+                    label={channel.name}
+                    icon={channel.isPrivate ? Lock : Hash}
+                    isActive={params.channelId === channel.id}
+                    isUnread={channel.unreadCount > 0}
+                    badgeCount={channel.unreadCount}
                   />
-                );
-              })}
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-      </ScrollArea>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
 
-      <div className="flex items-center justify-between border-t p-2">
-        {currentUser && <UserAvatar user={currentUser} showName />}
-        <DarkModeToggle />
+            <Collapsible defaultOpen>
+              <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+                <CollapsibleTrigger asChild>
+                  <div className="flex flex-1 cursor-pointer items-center gap-1">
+                    <ChevronDown className="h-4 w-4" />
+                    <span>Direct Messages</span>
+                  </div>
+                </CollapsibleTrigger>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <CollapsibleContent className="mt-2 flex flex-col gap-1">
+                {dms.map((dm) => {
+                  const user = users.find((u) => u.id === dm.userId);
+                  if (!user) return null;
+                  return (
+                    <SidebarLink
+                      key={dm.id}
+                      href={`/w/${params.workspaceId}/dm/${dm.userId}`}
+                      label={user.displayName}
+                      icon={<UserAvatar user={user} className="h-5 w-5" />}
+                      isActive={params.userId === dm.userId}
+                      isUnread={dm.unreadCount > 0}
+                      badgeCount={dm.unreadCount}
+                    />
+                  );
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+        </ScrollArea>
+
+        <div className="flex items-center justify-between border-t p-2">
+          {currentUser && <UserAvatar user={currentUser} showName />}
+          <DarkModeToggle />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
