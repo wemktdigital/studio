@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Paperclip, Mic, Send, AtSign, Smile } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Channel, User } from '@/lib/types';
-import { getSmartSuggestions } from '@/ai/flows/smart-suggestion';
+import { getSmartSuggestions, SmartSuggestionOutput } from '@/ai/flows/smart-suggestion';
 import SmartSuggestionPopover from './smart-suggestion-popover';
+import { useToast } from '@/hooks/use-toast';
 
 interface MessageComposerProps {
   conversation: Channel | User | undefined;
@@ -15,9 +16,11 @@ interface MessageComposerProps {
 export default function MessageComposer({ conversation }: MessageComposerProps) {
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [suggestions, setSuggestions] = useState<SmartSuggestionOutput['suggestions']>([]);
+  const [isSuggestionLoading, setSuggestionLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionQuery, setSuggestionQuery] = useState({ prefix: '', query: '' });
+  const { toast } = useToast();
 
   const placeholder = conversation
     ? 'name' in conversation
@@ -29,28 +32,49 @@ export default function MessageComposer({ conversation }: MessageComposerProps) 
     const value = event.target.value;
     setText(value);
 
+    // Regex to detect if the user is typing @ or # at the end of the text
     const match = value.match(/([@#])(\w*)$/);
+
     if (match) {
         setSuggestionQuery({ prefix: match[1], query: match[2] });
         setShowSuggestions(true);
     } else {
         setShowSuggestions(false);
+        setSuggestions([]);
     }
   };
 
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-        if(suggestionQuery.prefix && showSuggestions) {
-            // TODO: Add loading state
-            const result = await getSmartSuggestions(suggestionQuery);
-            setSuggestions(result.suggestions);
-        }
-    };
-    fetchSuggestions();
-  }, [suggestionQuery, showSuggestions]);
+  const fetchSuggestions = useCallback(async () => {
+    if (suggestionQuery.prefix && showSuggestions) {
+      setSuggestionLoading(true);
+      try {
+        const result = await getSmartSuggestions(suggestionQuery);
+        setSuggestions(result.suggestions);
+      } catch (error) {
+        console.error('Error fetching suggestions:', error);
+        toast({
+            title: 'Error',
+            description: 'Could not fetch smart suggestions.',
+            variant: 'destructive'
+        })
+        setSuggestions([]);
+      } finally {
+        setSuggestionLoading(false);
+      }
+    }
+  }, [suggestionQuery, showSuggestions, toast]);
 
-  const handleSuggestionSelect = (suggestion: string) => {
-    setText(prev => prev.replace(/([@#])\w*$/, `${suggestionQuery.prefix}${suggestion} `));
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+        fetchSuggestions();
+    }, 300); // Debounce API calls
+
+    return () => clearTimeout(debounceTimer);
+  }, [fetchSuggestions]);
+
+
+  const handleSuggestionSelect = (name: string) => {
+    setText(prev => prev.replace(/([@#])\w*$/, `${suggestionQuery.prefix}${name} `));
     setShowSuggestions(false);
     setSuggestions([]);
     textareaRef.current?.focus();
@@ -60,7 +84,12 @@ export default function MessageComposer({ conversation }: MessageComposerProps) 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      // We need a slight delay to allow the DOM to update before calculating scrollHeight
+      setTimeout(() => {
+          if(textareaRef.current) {
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+          }
+      }, 0)
     }
   }, [text]);
 
@@ -87,6 +116,7 @@ export default function MessageComposer({ conversation }: MessageComposerProps) 
             suggestions={suggestions}
             onSelect={handleSuggestionSelect}
             prefix={suggestionQuery.prefix}
+            isLoading={isSuggestionLoading}
           />
         )}
         <Textarea

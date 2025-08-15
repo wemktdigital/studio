@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { channels as mockChannels, users as mockUsers } from '@/lib/data';
 
 const SmartSuggestionInputSchema = z.object({
   prefix: z.string().describe('The prefix typed by the user, e.g., "@" or "#".'),
@@ -32,20 +33,41 @@ export async function getSmartSuggestions(input: SmartSuggestionInput): Promise<
   return smartSuggestionFlow(input);
 }
 
+const suggestionTool = ai.defineTool(
+  {
+    name: 'getSuggestionData',
+    description: 'Get a list of available channels or users to suggest from.',
+    input: z.object({
+        type: z.enum(['channel', 'user']),
+    }),
+    output: z.array(z.object({ id: z.string(), name: z.string() })),
+  },
+  async ({ type }) => {
+    if (type === 'channel') {
+      return mockChannels.map(c => ({ id: c.id, name: c.name }));
+    } else {
+      return mockUsers.map(u => ({ id: u.id, name: u.handle }));
+    }
+  }
+);
+
+
 const smartSuggestionPrompt = ai.definePrompt({
   name: 'smartSuggestionPrompt',
   input: {schema: SmartSuggestionInputSchema},
   output: {schema: SmartSuggestionOutputSchema},
+  tools: [suggestionTool],
   prompt: `You are a helpful assistant that provides suggestions for channels or users based on a prefix and a query.
 
 The user is typing in a message composer and has typed a prefix (either "@" for users or "#" for channels) followed by a query string.
 
-Based on the prefix and query, suggest relevant channels or users.  The suggestions should be limited to the most relevant items. Omit any suggestions that are not relevant.
+- Use the 'getSuggestionData' tool to fetch the list of available users or channels based on the prefix.
+- Filter this list to find items that match the user's query. The match should be case-insensitive and can be partial (e.g., 'gen' should match 'general').
+- Return a JSON array of up to 5 suggestions. Each suggestion should include the id, name, and type (channel or user).
+- If no relevant items are found, return an empty array for suggestions.
 
 Prefix: {{{prefix}}}
 Query: {{{query}}}
-
-Return a JSON array of suggestions. Each suggestion should include the id, name, and type (channel or user).
 `,
 });
 
