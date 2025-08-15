@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { useRightPane } from '@/hooks/use-right-pane.tsx';
 import ChannelDetailsPane from './channel-details-pane';
 import UserDetailsPane from './user-details-pane';
+import { users as allUsers } from '@/lib/data';
 
 interface ChannelHeaderProps {
   conversation: Channel | User | undefined;
@@ -21,13 +22,11 @@ export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
     if (!conversation) return;
 
     if ('isPrivate' in conversation) {
-      // It's a Channel
+      const channel = conversation as Channel;
+      const members = allUsers.filter(u => channel.members.includes(u.id));
       setPanelTitle(`About #${conversation.name}`);
-      // The members need to be fetched or passed down. For now, we pass an empty array.
-      // In a real app, you'd fetch members associated with this channel.
-      setContent(<ChannelDetailsPane channel={conversation} members={[]} />);
+      setContent(<ChannelDetailsPane channel={conversation} members={members} />);
     } else {
-      // It's a User
       setPanelTitle('Profile');
       setContent(<UserDetailsPane user={conversation} />);
     }
@@ -58,12 +57,14 @@ export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
       <div className="flex items-center gap-2">
         {isChannel && (
           <div className="flex -space-x-2 overflow-hidden">
-            {/* Mock members */}
-            <UserAvatar user={{id:'2', displayName: 'Bob', handle: 'bob', avatarUrl: 'https://i.pravatar.cc/40?u=bob', status: 'offline'}} className="h-7 w-7 border-2 border-background" />
-            <UserAvatar user={{id:'3', displayName: 'Charlie', handle: 'charlie', avatarUrl: 'https://i.pravatar.cc/40?u=charlie', status: 'away'}} className="h-7 w-7 border-2 border-background" />
-            <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
-              +4
-            </div>
+            {allUsers.slice(0, 2).map(user => (
+              <UserAvatar key={user.id} user={user} className="h-7 w-7 border-2 border-background" />
+            ))}
+            {allUsers.length > 2 &&
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted text-xs">
+                    +{allUsers.length - 2}
+                </div>
+            }
           </div>
         )}
         <Button variant="ghost" size="icon" aria-label="Start a call">

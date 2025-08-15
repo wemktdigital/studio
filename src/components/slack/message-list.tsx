@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Hash } from 'lucide-react';
 import { UserAvatar } from './user-avatar';
+import { users as allUsers } from '@/lib/data';
 
 interface MessageListProps {
   messages: Message[];
@@ -46,9 +47,8 @@ const DateDivider = ({ date }: { date: Date }) => {
 };
 
 const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
-  // TODO: Fetch actual members for the channel instead of mock users
-  const members = channel.members.map(id => ({ id, displayName: `User ${id}`, handle: `user${id}`, avatarUrl: `https://i.pravatar.cc/40?u=${id}`, status: 'online' as const }));
-  const creator = members[0]; // Assume first member is creator for mock purposes
+  const members = channel.members.map(id => allUsers.find(u => u.id === id)).filter(Boolean) as User[];
+  const creator = members[0];
 
   return (
     <div className="flex h-full flex-1 flex-col p-6">
@@ -82,7 +82,6 @@ const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
 export default function MessageList({ messages, users, conversation }: MessageListProps) {
   if (messages.length === 0) {
     if (conversation && 'isPrivate' in conversation) {
-       // TODO: Replace with real data fetching. The conversation object should already be passed down.
       return <EmptyChannelWelcome channel={conversation} />;
     }
     return (
@@ -109,7 +108,6 @@ export default function MessageList({ messages, users, conversation }: MessageLi
 
     const previousMessage = messages[index - 1];
     const nextMessage = messages[index + 1];
-    // TODO: The `users` array should be a map for efficient lookups.
     const author = users.find(u => u.id === message.authorId);
 
     const isFirstInGroup = !previousMessage || previousMessage.authorId !== message.authorId || !isSameDay(new Date(previousMessage.createdAt), currentDate);
