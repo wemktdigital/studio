@@ -87,7 +87,8 @@ export default function MessageComposer({ conversation }: MessageComposerProps) 
       // We need a slight delay to allow the DOM to update before calculating scrollHeight
       setTimeout(() => {
           if(textareaRef.current) {
-            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+            const scrollHeight = textareaRef.current.scrollHeight;
+            textareaRef.current.style.height = `${scrollHeight}px`;
           }
       }, 0)
     }
@@ -110,7 +111,7 @@ export default function MessageComposer({ conversation }: MessageComposerProps) 
 
   return (
     <div className="border-t bg-background p-4" data-testid="message-composer">
-      <div className="relative rounded-lg border bg-card p-2">
+      <div className="relative rounded-lg border bg-card">
         {showSuggestions && (
           <SmartSuggestionPopover
             suggestions={suggestions}
@@ -125,27 +126,19 @@ export default function MessageComposer({ conversation }: MessageComposerProps) 
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="max-h-48 resize-none border-none bg-transparent p-2 shadow-none focus-visible:ring-0"
+          className="max-h-48 resize-none border-none bg-transparent p-2 pr-24 shadow-none focus-visible:ring-0"
           rows={1}
         />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
+        <div className="absolute bottom-2 right-2 flex items-center gap-1">
             <Button variant="ghost" size="icon" aria-label="Attach file">
               <Paperclip className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" aria-label="Record audio">
-              <Mic className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" aria-label="Mention someone">
-              <AtSign className="h-5 w-5" />
-            </Button>
-             <Button variant="ghost" size="icon" aria-label="Add emoji">
+            <Button variant="ghost" size="icon" aria-label="Add emoji">
               <Smile className="h-5 w-5" />
             </Button>
-          </div>
-          <Button onClick={handleSend} disabled={!text.trim()} aria-label="Send message">
-            <Send className="h-5 w-5" />
-          </Button>
+            <Button onClick={handleSend} disabled={!text.trim()} aria-label="Send message" size="icon" className='bg-primary text-primary-foreground hover:bg-primary/90 rounded-full h-8 w-8'>
+              <Send className="h-4 w-4" />
+            </Button>
         </div>
       </div>
     </div>
