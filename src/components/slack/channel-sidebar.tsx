@@ -20,6 +20,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AddChannelDialog } from './add-channel-dialog';
+import { GlobalSearchDialog } from './global-search-dialog';
 
 interface ChannelSidebarProps {
   workspace: Workspace;
@@ -38,6 +39,8 @@ export default function ChannelSidebar({
 }: ChannelSidebarProps) {
   const currentUser = users.find(u => u.id === '1'); // Mock current user
   const [isAddChannelOpen, setAddChannelOpen] = useState(false);
+  const [isSearchOpen, setSearchOpen] = useState(false);
+
 
   const handleAddChannel = (data: { name: string; description?: string; isPrivate: boolean }) => {
     // TODO: Implement actual channel creation logic
@@ -51,6 +54,10 @@ export default function ChannelSidebar({
         isOpen={isAddChannelOpen}
         onOpenChange={setAddChannelOpen}
         onSubmit={handleAddChannel}
+      />
+      <GlobalSearchDialog
+        isOpen={isSearchOpen}
+        onOpenChange={setSearchOpen}
       />
       <div
         className="flex h-full w-72 flex-col bg-muted/80 text-foreground"
@@ -73,6 +80,13 @@ export default function ChannelSidebar({
 
         <ScrollArea className="flex-1 px-2">
           <div className="flex flex-col gap-4 py-4">
+            <div className='px-2'>
+              <Button variant="outline" className="w-full justify-start" onClick={() => setSearchOpen(true)}>
+                <Search className="h-4 w-4 mr-2" />
+                Search
+              </Button>
+            </div>
+            
             <SidebarNav>
               <SidebarNavItem icon={MessageSquare} label="Threads" href={`/w/${params.workspaceId}/threads`} />
               <SidebarNavItem icon={AtSign} label="Mentions" href={`/w/${params.workspaceId}/mentions`} />
@@ -82,10 +96,10 @@ export default function ChannelSidebar({
             <Collapsible defaultOpen>
               <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
                 <CollapsibleTrigger asChild>
-                  <div className="flex flex-1 cursor-pointer items-center gap-1">
+                  <button className="flex flex-1 cursor-pointer items-center gap-1">
                     <ChevronDown className="h-4 w-4" />
                     <span>Channels</span>
-                  </div>
+                  </button>
                 </CollapsibleTrigger>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAddChannelOpen(true)}>
                   <Plus className="h-4 w-4" />
@@ -109,10 +123,10 @@ export default function ChannelSidebar({
             <Collapsible defaultOpen>
               <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
                 <CollapsibleTrigger asChild>
-                  <div className="flex flex-1 cursor-pointer items-center gap-1">
+                  <button className="flex flex-1 cursor-pointer items-center gap-1">
                     <ChevronDown className="h-4 w-4" />
                     <span>Direct Messages</span>
-                  </div>
+                  </button>
                 </CollapsibleTrigger>
                 <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Plus className="h-4 w-4" />
