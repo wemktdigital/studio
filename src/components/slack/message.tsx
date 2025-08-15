@@ -17,6 +17,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useRightPane } from '@/hooks/use-right-pane';
+import UserDetailsPane from './user-details-pane';
 
 interface MessageItemProps {
   message: Message;
@@ -28,6 +30,13 @@ interface MessageItemProps {
 export function MessageItem({ message, author, isFirstInGroup }: MessageItemProps) {
   const [isClient, setIsClient] = useState(false);
   const timestamp = new Date(message.createdAt);
+  const { setOpen, setContent, setPanelTitle } = useRightPane();
+
+  const handleAvatarClick = () => {
+    setPanelTitle('Profile');
+    setContent(<UserDetailsPane user={author} />);
+    setOpen(true);
+  };
 
   useEffect(() => {
     setIsClient(true);
@@ -39,7 +48,11 @@ export function MessageItem({ message, author, isFirstInGroup }: MessageItemProp
       data-testid="message-item"
     >
       <div className="w-10 shrink-0">
-        {isFirstInGroup && <UserAvatar user={author} className="h-10 w-10" />}
+        {isFirstInGroup && (
+           <button onClick={handleAvatarClick} className="rounded-full">
+            <UserAvatar user={author} className="h-10 w-10" />
+           </button>
+        )}
       </div>
       <div className="flex-1">
         {isFirstInGroup && (

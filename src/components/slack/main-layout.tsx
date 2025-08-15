@@ -5,7 +5,7 @@ import WorkspaceSidebar from './workspace-sidebar';
 import ChannelSidebar from './channel-sidebar';
 import RightPane from './right-pane';
 import { Workspace, Channel, DirectMessage, User, Message } from '@/lib/types';
-import { RightPaneProvider, useRightPane } from '@/hooks/use-right-pane.tsx';
+import { RightPaneProvider } from '@/hooks/use-right-pane';
 
 interface MainLayoutProps {
   workspaces: Workspace[];
@@ -29,8 +29,6 @@ function MainLayoutContent({
   children,
   params,
 }: MainLayoutProps) {
-  const { isOpen, setOpen } = useRightPane();
-
   return (
     <div className="flex h-screen w-full bg-background text-foreground" data-testid="main-layout">
       <WorkspaceSidebar workspaces={workspaces} activeWorkspaceId={params.workspaceId} />
@@ -45,8 +43,6 @@ function MainLayoutContent({
         {children}
       </main>
       <RightPane
-        isOpen={isOpen}
-        onClose={() => setOpen(false)}
         conversation={currentConversation}
         users={users}
       />

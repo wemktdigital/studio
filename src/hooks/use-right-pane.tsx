@@ -7,6 +7,8 @@ interface RightPaneContextType {
   setOpen: (isOpen: boolean) => void;
   content: ReactNode | null;
   setContent: (content: ReactNode) => void;
+  panelTitle: string;
+  setPanelTitle: (title: string) => void;
 }
 
 const RightPaneContext = createContext<RightPaneContextType | undefined>(undefined);
@@ -14,9 +16,10 @@ const RightPaneContext = createContext<RightPaneContextType | undefined>(undefin
 export function RightPaneProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false);
   const [content, setContent] = useState<ReactNode | null>(null);
+  const [panelTitle, setPanelTitle] = useState('Details');
 
   return (
-    <RightPaneContext.Provider value={{ isOpen, setOpen, content, setContent }}>
+    <RightPaneContext.Provider value={{ isOpen, setOpen, content, setContent, panelTitle, setPanelTitle }}>
       {children}
     </RightPaneContext.Provider>
   );

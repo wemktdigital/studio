@@ -1,19 +1,38 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Hash, User, Info, Search, Phone, Star } from 'lucide-react';
 import { Channel } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from './user-avatar';
 import { Separator } from '@/components/ui/separator';
 import { useRightPane } from '@/hooks/use-right-pane.tsx';
+import ChannelDetailsPane from './channel-details-pane';
+import UserDetailsPane from './user-details-pane';
 
 interface ChannelHeaderProps {
   conversation: Channel | User | undefined;
 }
 
 export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
-  const { setOpen } = useRightPane();
+  const { setOpen, setContent, setPanelTitle } = useRightPane();
+
+  const handleInfoClick = useCallback(() => {
+    if (!conversation) return;
+
+    if ('isPrivate' in conversation) {
+      // It's a Channel
+      setPanelTitle(`About #${conversation.name}`);
+      // The members need to be fetched or passed down. For now, we pass an empty array.
+      // In a real app, you'd fetch members associated with this channel.
+      setContent(<ChannelDetailsPane channel={conversation} members={[]} />);
+    } else {
+      // It's a User
+      setPanelTitle('Profile');
+      setContent(<UserDetailsPane user={conversation} />);
+    }
+    setOpen(true);
+  }, [conversation, setOpen, setContent, setPanelTitle]);
 
   if (!conversation) {
     return <div className="flex h-16 shrink-0 items-center border-b px-6">Loading...</div>; // Or a skeleton loader
@@ -51,7 +70,7 @@ export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
           <Phone className="h-5 w-5" />
         </Button>
         <Separator orientation="vertical" className="h-6" />
-        <Button variant="ghost" size="icon" aria-label="View conversation details" onClick={() => setOpen(true)}>
+        <Button variant="ghost" size="icon" aria-label="View conversation details" onClick={handleInfoClick}>
           <Info className="h-5 w-5" />
         </Button>
       </div>
