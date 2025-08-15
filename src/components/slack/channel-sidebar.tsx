@@ -74,13 +74,13 @@ export default function ChannelSidebar({
         onSelectUser={handleNewDm}
       />
       <div
-        className="flex h-full w-72 flex-col bg-muted/80 text-foreground"
+        className="flex h-full w-72 flex-col bg-sidebar text-sidebar-foreground"
         data-testid="channel-sidebar"
       >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center justify-between p-4 shadow-sm transition-colors hover:bg-muted">
-              <h1 className="text-xl font-bold">{workspace.name}</h1>
+            <button className="flex w-full items-center justify-between p-4 shadow-sm transition-colors hover:bg-sidebar-accent border-b border-sidebar-border">
+              <h1 className="text-xl font-bold text-sidebar-accent-foreground">{workspace.name}</h1>
               <ChevronsUpDown className="h-5 w-5 opacity-50" />
             </button>
           </DropdownMenuTrigger>
@@ -95,7 +95,7 @@ export default function ChannelSidebar({
         <ScrollArea className="flex-1 px-2">
           <div className="flex flex-col gap-4 py-4">
             <div className='px-2'>
-              <Button variant="outline" className="w-full justify-start" onClick={() => setSearchOpen(true)}>
+              <Button variant="outline" className="w-full justify-start bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent">
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
@@ -108,14 +108,14 @@ export default function ChannelSidebar({
             </SidebarNav>
 
             <Collapsible defaultOpen>
-              <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+              <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-sidebar-foreground/80 hover:text-sidebar-foreground">
                 <CollapsibleTrigger asChild>
                     <button className="flex flex-1 cursor-pointer items-center gap-1">
                         <ChevronDown className="h-4 w-4" />
                         <span>Channels</span>
                     </button>
                 </CollapsibleTrigger>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAddChannelOpen(true)}>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -135,7 +135,7 @@ export default function ChannelSidebar({
             </Collapsible>
 
             <Collapsible defaultOpen>
-              <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
+              <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-sidebar-foreground/80 hover:text-sidebar-foreground">
                 <CollapsibleTrigger asChild>
                   <button className="flex flex-1 cursor-pointer items-center gap-1">
                     <ChevronDown className="h-4 w-4" />
@@ -167,7 +167,7 @@ export default function ChannelSidebar({
           </div>
         </ScrollArea>
 
-        <div className="flex items-center justify-between border-t p-2">
+        <div className="flex items-center justify-between border-t border-sidebar-border p-2">
           {currentUser && <UserAvatar user={currentUser} showName />}
           <DarkModeToggle />
         </div>
@@ -183,7 +183,7 @@ const SidebarNav = ({ children }: { children: React.ReactNode }) => (
 const SidebarNavItem = ({ icon: Icon, label, href }: { icon: React.ElementType, label: string, href: string }) => (
     <Link
         href={href}
-        className="flex items-center gap-3 rounded-md px-2 py-1.5 text-base text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+        className="flex items-center gap-3 rounded-md px-2 py-1.5 text-base text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
     >
         <Icon className="h-5 w-5" />
         <span>{label}</span>
@@ -203,8 +203,8 @@ const SidebarLink = ({ href, label, icon: Icon, isActive, isUnread, badgeCount }
       href={href}
       className={cn(
         'group flex items-center justify-between rounded-md px-2 py-1 text-base',
-        isActive ? 'bg-primary/80 text-primary-foreground' : 'text-muted-foreground hover:bg-primary/10 hover:text-foreground',
-        isUnread && !isActive && 'font-bold text-foreground'
+        isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        isUnread && !isActive && 'font-bold text-sidebar-accent-foreground'
       )}
     >
       <div className="flex items-center gap-2 overflow-hidden">
@@ -214,7 +214,7 @@ const SidebarLink = ({ href, label, icon: Icon, isActive, isUnread, badgeCount }
       {badgeCount > 0 && (
         <span className={cn(
           "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-bold",
-          isActive ? 'bg-primary-foreground text-primary' : 'bg-destructive text-destructive-foreground'
+          isActive ? 'bg-sidebar-primary-foreground text-sidebar-primary' : 'bg-destructive text-destructive-foreground'
         )}>
           {badgeCount}
         </span>
