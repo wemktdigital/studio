@@ -24,6 +24,7 @@ export default function MainLayout({
   currentWorkspace,
   channels,
   dms,
+  currentConversation,
   children,
   params,
 }: MainLayoutProps) {
@@ -49,7 +50,12 @@ export default function MainLayout({
       <main className="flex flex-1 flex-col overflow-hidden">
         {children}
       </main>
-      <RightPane isOpen={rightPaneOpen} onClose={() => setRightPaneOpen(false)} />
+      <RightPane 
+        isOpen={rightPaneOpen} 
+        onClose={() => setRightPaneOpen(false)} 
+        conversation={currentConversation}
+        users={users}
+      />
     </div>
   );
 }

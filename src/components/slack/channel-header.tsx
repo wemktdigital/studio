@@ -48,12 +48,6 @@ export default function ChannelHeader({ conversation }: ChannelHeaderProps) {
           <Phone className="h-5 w-5" />
         </Button>
         <Separator orientation="vertical" className="h-6" />
-        <Button variant="ghost" size="icon" aria-label="Search in conversation">
-          <Search className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" aria-label="View pinned messages">
-          <Star className="h-5 w-5" />
-        </Button>
         <Button variant="ghost" size="icon" aria-label="View conversation details">
           <Info className="h-5 w-5" />
         </Button>
