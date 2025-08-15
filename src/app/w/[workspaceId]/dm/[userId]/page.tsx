@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { getMockData } from '@/lib/data';
 import ChannelHeader from '@/components/slack/channel-header';
@@ -15,7 +16,7 @@ export default function DMPage({
   return (
     <>
       <ChannelHeader conversation={currentConversation} />
-      <MessageList messages={messages} users={users} />
+      <MessageList messages={messages} users={users} conversation={currentConversation} />
       <MessageComposer conversation={currentConversation} />
     </>
   );

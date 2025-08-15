@@ -1,17 +1,20 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
-import { Message, User } from '@/lib/types';
+import { Message, User, Channel } from '@/lib/types';
 import { MessageItem } from './message';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Hash } from 'lucide-react';
+import { UserAvatar } from './user-avatar';
 
 interface MessageListProps {
   messages: Message[];
   users: User[];
+  conversation: Channel | User | undefined;
 }
 
 const DateDivider = ({ date }: { date: Date }) => {
@@ -42,9 +45,46 @@ const DateDivider = ({ date }: { date: Date }) => {
   );
 };
 
+const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
+  // TODO: Fetch actual members for the channel instead of mock users
+  const members = channel.members.map(id => ({ id, displayName: `User ${id}`, handle: `user${id}`, avatarUrl: `https://i.pravatar.cc/40?u=${id}`, status: 'online' as const }));
+  const creator = members[0]; // Assume first member is creator for mock purposes
 
-export default function MessageList({ messages, users }: MessageListProps) {
+  return (
+    <div className="flex h-full flex-1 flex-col p-6">
+      <div className="flex items-center gap-3 border-b pb-4">
+        <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-muted">
+          <Hash className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold">Welcome to #{channel.name}</h2>
+          <p className="text-muted-foreground">This is the start of the #{channel.name} channel.</p>
+        </div>
+      </div>
+      <div className='py-4'>
+        {channel.description && (
+          <p className="text-sm pb-4 border-b">
+            <span className='font-bold'>Channel description:</span> {channel.description}
+          </p>
+        )}
+      </div>
+      {creator && (
+         <div className='text-sm text-muted-foreground flex items-center gap-2 pt-2'>
+            <UserAvatar user={creator} className='h-8 w-8'/>
+            <p><span className='font-bold text-foreground'>{creator.displayName}</span> created this channel on {format(new Date(), 'MMMM d, yyyy')}.</p>
+         </div>
+      )}
+    </div>
+  )
+}
+
+
+export default function MessageList({ messages, users, conversation }: MessageListProps) {
   if (messages.length === 0) {
+    if (conversation && 'isPrivate' in conversation) {
+       // TODO: Replace with real data fetching. The conversation object should already be passed down.
+      return <EmptyChannelWelcome channel={conversation} />;
+    }
     return (
       <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 p-8 text-center" data-testid="empty-message-list">
         <div className="rounded-full bg-muted p-4">
@@ -52,9 +92,8 @@ export default function MessageList({ messages, users }: MessageListProps) {
         </div>
         <h3 className="text-xl font-bold">No messages yet</h3>
         <p className="text-muted-foreground">
-          Be the first to say something! Send a message, an emoji, or share a file.
+          Send a message to start the conversation.
         </p>
-        <Button>Send a Message</Button>
       </div>
     );
   }
@@ -70,6 +109,7 @@ export default function MessageList({ messages, users }: MessageListProps) {
 
     const previousMessage = messages[index - 1];
     const nextMessage = messages[index + 1];
+    // TODO: The `users` array should be a map for efficient lookups.
     const author = users.find(u => u.id === message.authorId);
 
     const isFirstInGroup = !previousMessage || previousMessage.authorId !== message.authorId || !isSameDay(new Date(previousMessage.createdAt), currentDate);

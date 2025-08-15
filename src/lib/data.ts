@@ -1,3 +1,4 @@
+
 import type { Workspace, User, Channel, DirectMessage, Message } from './types';
 
 // TODO: Replace this mock data with Firestore streams
@@ -23,6 +24,7 @@ export const channels: Channel[] = [
   { id: '4', workspaceId: '1', name: 'project-pegasus', description: 'Top secret project', isPrivate: true, unreadCount: 0, members: ['1', '5'] },
   { id: '5', workspaceId: '2', name: 'campaign-launch', isPrivate: false, unreadCount: 5, members: ['1', '2', '4'] },
   { id: '6', workspaceId: '2', name: 'social-media', isPrivate: false, unreadCount: 0, members: ['4', '5'] },
+  { id: '7', workspaceId: '1', name: 'empty-channel', description: 'This is a channel to test the empty state.', isPrivate: false, unreadCount: 0, members: ['1'] },
 ];
 
 export const dms: DirectMessage[] = [
@@ -40,7 +42,7 @@ export const messages: Message[] = [
   { id: '3', channelId: '1', authorId: '1', content: 'Here is the new design mockup.', type: 'image', attachment: { name: 'mockup.png', url: 'https://placehold.co/600x400' }, dataAiHint: 'design mockup', createdAt: '2024-07-30T09:05:00Z', reactions: [{ emoji: '👍', count: 1, users: ['4'] }] },
   { id: '4', channelId: '1', authorId: '3', content: 'Looks great! I have some feedback.', type: 'text', createdAt: '2024-07-30T09:10:00Z', reactions: [] },
   { id: '5', channelId: '1', authorId: '4', content: 'Check out the new documentation: https://docs.example.com', type: 'link', createdAt: '2024-07-30T10:30:00Z', reactions: [] },
-  { id: '6', channelId: '1', authorId: '5', content: 'Can someone help with this snippet?', type: 'code', content: `const greeting = () => {\n  console.log("Hello, world!");\n};`, createdAt: '2024-07-30T11:00:00Z', reactions: [{ emoji: '🤔', count: 1, users: ['6'] }] },
+  { id: '6', channelId: '1', authorId: '5', content: `const greeting = () => {\n  console.log("Hello, world!");\n};`, type: 'code', createdAt: '2024-07-30T11:00:00Z', reactions: [{ emoji: '🤔', count: 1, users: ['6'] }] },
   
   // Channel 3: backend-dev
   { id: '7', channelId: '3', authorId: '6', content: 'API is down!', type: 'text', createdAt: '2024-07-30T14:00:00Z', reactions: [{ emoji: '🔥', count: 2, users: ['2', '5'] }] },
