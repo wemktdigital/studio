@@ -29,7 +29,6 @@ interface MessageItemProps {
 
 export function MessageItem({ message, author, isFirstInGroup }: MessageItemProps) {
   const [isClient, setIsClient] = useState(false);
-  const timestamp = new Date(message.createdAt);
   const { setOpen, setContent, setPanelTitle } = useRightPane();
 
   const handleAvatarClick = () => {
@@ -41,6 +40,8 @@ export function MessageItem({ message, author, isFirstInGroup }: MessageItemProp
   useEffect(() => {
     setIsClient(true);
   }, []);
+  
+  const timestamp = isClient ? new Date(message.createdAt) : null;
 
   return (
     <div
@@ -62,11 +63,11 @@ export function MessageItem({ message, author, isFirstInGroup }: MessageItemProp
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-xs text-muted-foreground">
-                    {isClient ? format(timestamp, 'h:mm a') : ''}
+                    {timestamp ? format(timestamp, 'h:mm a') : ''}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>{format(timestamp, 'EEEE, MMMM d, yyyy h:mm a')}</p>
+                  {timestamp && <p>{format(timestamp, 'EEEE, MMMM d, yyyy h:mm a')}</p>}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -109,6 +110,7 @@ function MessageContent({ message }: { message: Message }) {
           width={400}
           height={300}
           className="mt-2 max-w-sm rounded-lg"
+          data-ai-hint={message.dataAiHint}
         />
       );
     case 'code':

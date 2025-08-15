@@ -50,6 +50,7 @@ export type Message = {
     name: string;
     url: string;
   };
+  dataAiHint?: string;
 };
 
 export type PinnedMessage = {

@@ -25,12 +25,11 @@ const DateDivider = ({ date }: { date: Date }) => {
     };
     setLabel(getLabel());
   }, [date]);
-
+  
   if (!label) {
-    // Render nothing or a placeholder on the server
     return null;
   }
-  
+
   return (
     <div className="relative py-4" data-testid="date-divider">
       <Separator />
