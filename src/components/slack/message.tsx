@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useRightPane } from '@/hooks/use-right-pane';
 import UserDetailsPane from './user-details-pane';
+import ThreadPane from './thread-pane';
 import { users as mockUsers } from '@/lib/data'; // Import mock users for tooltip
 
 interface MessageItemProps {
@@ -32,6 +33,13 @@ export function MessageItem({ message, author, isFirstInGroup }: MessageItemProp
     setContent(<UserDetailsPane user={author} />);
     setOpen(true);
   };
+
+  const handleReplyClick = () => {
+    setPanelTitle('Thread');
+    setContent(<ThreadPane originalMessage={message} author={author} />);
+    setOpen(true);
+  };
+
 
   useEffect(() => {
     setIsClient(true);
@@ -99,7 +107,7 @@ export function MessageItem({ message, author, isFirstInGroup }: MessageItemProp
                 <Button variant="ghost" size="icon" className="h-7 w-7"><Smile className="h-4 w-4" /></Button>
               </MessageActionTooltip>
               <MessageActionTooltip label="Reply in thread">
-                <Button variant="ghost" size="icon" className="h-7 w-7"><CornerDownRight className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleReplyClick}><CornerDownRight className="h-4 w-4" /></Button>
               </MessageActionTooltip>
               <MessageActionTooltip label="More actions">
                 <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-4 w-4" /></Button>
@@ -119,7 +127,7 @@ const MessageActionTooltip = ({ label, children }: { label: string, children: Re
 );
 
 
-function MessageContent({ message }: { message: Message }) {
+export function MessageContent({ message }: { message: Message }) {
   switch (message.type) {
     case 'image':
       return (
