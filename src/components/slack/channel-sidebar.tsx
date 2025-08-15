@@ -142,16 +142,14 @@ const SidebarNavItem = ({ icon: Icon, label, href }: { icon: React.ElementType, 
     </Link>
 );
 
-const SidebarLink = ({ href, label, icon: IconOrComp, isActive, isUnread, badgeCount }: {
+const SidebarLink = ({ href, label, icon: Icon, isActive, isUnread, badgeCount }: {
   href: string;
   label: string;
-  icon: React.ReactNode | React.ElementType;
+  icon: React.ElementType | React.ReactNode;
   isActive: boolean;
   isUnread: boolean;
   badgeCount: number;
 }) => {
-  const Icon = typeof IconOrComp === 'function' ? <IconOrComp className="h-4 w-4 opacity-70" /> : IconOrComp;
-
   return (
     <Link
       href={href}
@@ -162,7 +160,7 @@ const SidebarLink = ({ href, label, icon: IconOrComp, isActive, isUnread, badgeC
       )}
     >
       <div className="flex items-center gap-2 overflow-hidden">
-        {Icon}
+        {React.isValidElement(Icon) ? Icon : <Icon className="h-4 w-4 opacity-70" />}
         <span className="truncate">{label}</span>
       </div>
       {badgeCount > 0 && (

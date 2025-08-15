@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Paperclip, Mic, Send, AtSign, Smile } from 'lucide-radix';
+import { Paperclip, Mic, Send, AtSign, Smile } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Channel, User } from '@/lib/types';

@@ -7,6 +7,7 @@ import { MessageItem } from './message';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Hash } from 'lucide-react';
 
 interface MessageListProps {
   messages: Message[];
