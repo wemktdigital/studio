@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { Message, User } from '@/lib/types';
 import { MessageItem } from './message';
@@ -15,18 +15,28 @@ interface MessageListProps {
 }
 
 const DateDivider = ({ date }: { date: Date }) => {
-  const getLabel = () => {
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    return format(date, 'MMMM d, yyyy');
-  };
+  const [label, setLabel] = useState('');
 
+  useEffect(() => {
+    const getLabel = () => {
+      if (isToday(date)) return 'Today';
+      if (isYesterday(date)) return 'Yesterday';
+      return format(date, 'MMMM d, yyyy');
+    };
+    setLabel(getLabel());
+  }, [date]);
+
+  if (!label) {
+    // Render nothing or a placeholder on the server
+    return null;
+  }
+  
   return (
     <div className="relative py-4" data-testid="date-divider">
       <Separator />
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <span className="rounded-full border bg-background px-3 py-1 text-xs font-semibold">
-          {getLabel()}
+          {label}
         </span>
       </div>
     </div>

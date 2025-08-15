@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { format } from 'date-fns';
 import { MoreHorizontal, Smile, ArrowBigUp, CornerDownRight } from 'lucide-react';
@@ -26,7 +26,12 @@ interface MessageItemProps {
 }
 
 export function MessageItem({ message, author, isFirstInGroup }: MessageItemProps) {
+  const [isClient, setIsClient] = useState(false);
   const timestamp = new Date(message.createdAt);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <div
@@ -44,7 +49,7 @@ export function MessageItem({ message, author, isFirstInGroup }: MessageItemProp
               <Tooltip>
                 <TooltipTrigger asChild>
                   <span className="text-xs text-muted-foreground">
-                    {format(timestamp, 'h:mm a')}
+                    {isClient ? format(timestamp, 'h:mm a') : ''}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -91,7 +96,6 @@ function MessageContent({ message }: { message: Message }) {
           width={400}
           height={300}
           className="mt-2 max-w-sm rounded-lg"
-          data-ai-hint={message.dataAiHint}
         />
       );
     case 'code':
