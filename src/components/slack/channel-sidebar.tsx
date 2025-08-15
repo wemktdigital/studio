@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AddChannelDialog } from './add-channel-dialog';
 import { GlobalSearchDialog } from './global-search-dialog';
+import { NewDmDialog } from './new-dm-dialog';
 
 interface ChannelSidebarProps {
   workspace: Workspace;
@@ -39,6 +40,7 @@ export default function ChannelSidebar({
 }: ChannelSidebarProps) {
   const currentUser = users.find(u => u.id === '1'); // Mock current user
   const [isAddChannelOpen, setAddChannelOpen] = useState(false);
+  const [isNewDmOpen, setNewDmOpen] = useState(false);
   const [isSearchOpen, setSearchOpen] = useState(false);
 
 
@@ -47,6 +49,12 @@ export default function ChannelSidebar({
     console.log('Creating channel:', data);
     setAddChannelOpen(false);
   };
+
+  const handleNewDm = (userId: string) => {
+    // TODO: Implement actual DM creation and navigation
+    console.log('Starting DM with user:', userId);
+    setNewDmOpen(false);
+  }
 
   return (
     <>
@@ -58,6 +66,12 @@ export default function ChannelSidebar({
       <GlobalSearchDialog
         isOpen={isSearchOpen}
         onOpenChange={setSearchOpen}
+      />
+      <NewDmDialog
+        isOpen={isNewDmOpen}
+        onOpenChange={setNewDmOpen}
+        users={users.filter(u => u.id !== currentUser?.id)}
+        onSelectUser={handleNewDm}
       />
       <div
         className="flex h-full w-72 flex-col bg-muted/80 text-foreground"
@@ -96,10 +110,10 @@ export default function ChannelSidebar({
             <Collapsible defaultOpen>
               <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-muted-foreground hover:text-foreground">
                 <CollapsibleTrigger asChild>
-                  <button className="flex flex-1 cursor-pointer items-center gap-1">
-                    <ChevronDown className="h-4 w-4" />
-                    <span>Channels</span>
-                  </button>
+                    <button className="flex flex-1 cursor-pointer items-center gap-1">
+                        <ChevronDown className="h-4 w-4" />
+                        <span>Channels</span>
+                    </button>
                 </CollapsibleTrigger>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAddChannelOpen(true)}>
                   <Plus className="h-4 w-4" />
@@ -128,7 +142,7 @@ export default function ChannelSidebar({
                     <span>Direct Messages</span>
                   </button>
                 </CollapsibleTrigger>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setNewDmOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
