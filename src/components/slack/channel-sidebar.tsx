@@ -95,7 +95,11 @@ export default function ChannelSidebar({
         <ScrollArea className="flex-1 px-2">
           <div className="flex flex-col gap-4 py-4">
             <div className='px-2'>
-              <Button variant="outline" className="w-full justify-start bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start bg-sidebar-accent/50 border-sidebar-border hover:bg-sidebar-accent"
+                onClick={() => setSearchOpen(true)}
+              >
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
@@ -115,7 +119,7 @@ export default function ChannelSidebar({
                         <span>Channels</span>
                     </button>
                 </CollapsibleTrigger>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setAddChannelOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
