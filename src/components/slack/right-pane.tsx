@@ -1,6 +1,6 @@
 'use client';
 
-import { X, Calendar, Mail, Phone, Hash } from 'lucide-react';
+import { X, Calendar, Mail, Phone, Hash, CornerDownRight } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { useEffect, useCallback } from 'react';
 import { useRightPane } from '@/hooks/use-right-pane';
 import ChannelDetailsPane from './channel-details-pane';
 import UserDetailsPane from './user-details-pane';
+import ThreadsList from './threads-list';
 
 interface RightPaneProps {
   conversation: Channel | User | undefined;
@@ -29,14 +30,14 @@ export default function RightPane({ conversation, users }: RightPaneProps) {
     if (isChannel) {
       const channel = conversation as Channel;
       const members = users.filter(u => channel.members.includes(u.id));
-      setPanelTitle(`About #${channel.name}`);
-      setContent(<ChannelDetailsPane channel={channel} members={members} />);
+      setPanelTitle(`Threads - #${channel.name}`);
+      setContent(<ThreadsList channelId={channel.id} workspaceId={channel.workspaceId} />);
     } else if (isUser) {
       setPanelTitle('Profile');
       setContent(<UserDetailsPane user={conversation as User} />);
     } else {
-      setPanelTitle('Details');
-      setContent(<div className="p-4 text-sm text-muted-foreground">Select a conversation to see details.</div>);
+      setPanelTitle('Threads');
+      setContent(<div className="p-4 text-sm text-muted-foreground">No channel selected. Select a channel to see threads.</div>);
     }
   }, [conversation, isChannel, isUser, setContent, setPanelTitle, users]);
 
@@ -55,11 +56,11 @@ export default function RightPane({ conversation, users }: RightPaneProps) {
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ x: '100%' }}
-          animate={{ x: 0 }}
-          exit={{ x: '100%' }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className="fixed right-0 top-0 h-full w-96 border-l bg-background shadow-lg z-10"
+          initial={{ x: 400, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 400, opacity: 0 }}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          className="w-96 border-l bg-background shadow-lg flex-shrink-0"
           data-testid="right-pane"
         >
           <div className="flex h-full flex-col">

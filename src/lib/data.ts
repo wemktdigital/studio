@@ -37,15 +37,15 @@ export const dms: DirectMessage[] = [
 
 export const messages: Message[] = [
   // Channel 1: general
-  { id: '1', channelId: '1', authorId: '1', content: 'Welcome to the team!', type: 'text', createdAt: '2024-07-30T09:00:00Z', reactions: [{ emoji: '🎉', count: 3, users: ['2', '3', '4'] }] },
+  { id: '1', channelId: '1', authorId: '1', content: 'Welcome to the team!', type: 'text', createdAt: '2024-07-30T09:00:00Z', reactions: [{ id: 'reaction-1', emoji: '🎉', count: 3, users: ['2', '3', '4'], hasReacted: false }] },
   { id: '2', channelId: '1', authorId: '2', content: 'Glad to be here!', type: 'text', createdAt: '2024-07-30T09:01:00Z', reactions: [] },
-  { id: '3', channelId: '1', authorId: '1', content: 'Here is the new design mockup.', type: 'image', attachment: { name: 'mockup.png', url: 'https://placehold.co/600x400' }, dataAiHint: 'design mockup', createdAt: '2024-07-30T09:05:00Z', reactions: [{ emoji: '👍', count: 1, users: ['4'] }] },
+  { id: '3', channelId: '1', authorId: '1', content: 'Here is the new design mockup.', type: 'image', attachment: { name: 'mockup.png', url: 'https://placehold.co/600x400' }, dataAiHint: 'design mockup', createdAt: '2024-07-30T09:05:00Z', reactions: [{ id: 'reaction-3', emoji: '👍', count: 1, users: ['4'], hasReacted: false }] },
   { id: '4', channelId: '1', authorId: '3', content: 'Looks great! I have some feedback.', type: 'text', createdAt: '2024-07-30T09:10:00Z', reactions: [] },
   { id: '5', channelId: '1', authorId: '4', content: 'Check out the new documentation: https://docs.example.com', type: 'link', createdAt: '2024-07-30T10:30:00Z', reactions: [] },
-  { id: '6', channelId: '1', authorId: '5', content: `const greeting = () => {\n  console.log("Hello, world!");\n};`, type: 'code', createdAt: '2024-07-30T11:00:00Z', reactions: [{ emoji: '🤔', count: 1, users: ['6'] }] },
+  { id: '6', channelId: '1', authorId: '5', content: `const greeting = () => {\n  console.log("Hello, world!");\n};`, type: 'code', createdAt: '2024-07-30T11:00:00Z', reactions: [{ id: 'reaction-6', emoji: '🤔', count: 1, users: ['6'], hasReacted: false }] },
   
   // Channel 3: backend-dev
-  { id: '7', channelId: '3', authorId: '6', content: 'API is down!', type: 'text', createdAt: '2024-07-30T14:00:00Z', reactions: [{ emoji: '🔥', count: 2, users: ['2', '5'] }] },
+  { id: '7', channelId: '3', authorId: '6', content: 'API is down!', type: 'text', createdAt: '2024-07-30T14:00:00Z', reactions: [{ id: 'reaction-7', emoji: '🔥', count: 2, users: ['2', '5'], hasReacted: false }] },
 
   // DM with Bob (user 2)
   { id: '8', dmId: '1', authorId: '1', content: 'Hey Bob, do you have a minute?', type: 'text', createdAt: '2024-07-30T10:00:00Z', reactions: [] },

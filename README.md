@@ -34,21 +34,37 @@ All mock data for the application (workspaces, users, channels, messages, etc.) 
 
 You can modify the arrays exported from this file to change the content displayed in the UI. The data structures and types are defined in `src/lib/types.ts`.
 
-## Integrating with Firestore
+## Backend com Supabase
 
-This project is set up to make future integration with a real backend like Firestore as seamless as possible. Here's a guide to the key places where you'll need to make changes:
+Este projeto agora inclui um backend completo com Supabase! 🚀
 
-1.  **Data Fetching**:
-    - The primary data fetching logic is located in `src/lib/data.ts` within the `getMockData` function.
-    - You will need to replace the mock data retrieval in this function with real-time listeners or queries to your Firestore collections.
-    - Look for `// TODO: Replace with real data fetching` comments in the page components (e.g., `src/app/w/[workspaceId]/c/[channelId]/page.tsx`) and the main layout (`src/app/w/[workspaceId]/layout.tsx`). These are the primary locations to call your new data fetching hooks.
+### ✅ O que já está implementado:
+- **Configuração completa do Supabase** com TypeScript
+- **Sistema de autenticação** com hooks e providers
+- **Schema do banco de dados** com todas as tabelas necessárias
+- **Middleware de autenticação** para proteção de rotas
+- **Row Level Security (RLS)** para segurança dos dados
 
-2.  **Data Mutation**:
-    - Actions like sending a message are currently handled in components like `src/components/slack/message-composer.tsx`.
-    - Look for `// TODO: Implement actual message sending logic` comments. You will need to replace the `console.log` statements with calls to the Firestore SDK to add new documents to your collections.
+### 🔧 Configuração necessária:
+1. **Criar projeto no Supabase** ([supabase.com](https://supabase.com))
+2. **Configurar variáveis de ambiente** (ver `env.example`)
+3. **Executar schema SQL** do arquivo `supabase-schema.sql`
 
-3.  **Authentication**:
-    - The current user is mocked in `src/components/slack/channel-sidebar.tsx`.
-    - You will need to implement a proper authentication flow (e.g., with Firebase Authentication) and use the authenticated user's information throughout the application.
+### 📚 Documentação:
+- **Backend Setup**: `docs/backend-setup.md`
+- **Schema SQL**: `supabase-schema.sql`
+- **Tipos TypeScript**: `src/lib/supabase/types.ts`
 
-By replacing the mock data functions with your Firestore logic at these key points, you can transition the application from a UI prototype to a fully functional, real-time messaging app.
+### 🔄 Próximos passos:
+- [ ] Implementar serviços de dados (WorkspaceService, MessageService, etc.)
+- [ ] Migrar componentes para usar dados reais
+- [ ] Implementar sistema de mensagens em tempo real
+- [ ] Adicionar upload de arquivos
+
+### 🎯 Vantagens do Supabase:
+- ✅ PostgreSQL nativo com funcionalidades avançadas
+- ✅ Tempo real nativo com WebSockets
+- ✅ Autenticação robusta e fácil de implementar
+- ✅ Storage para upload de arquivos
+- ✅ Full-Text Search integrado
+- ✅ Row Level Security para controle de acesso granular

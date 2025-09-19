@@ -3,13 +3,14 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronsUpDown, Dot, Hash, Lock, Plus, Search, MessageSquare, AtSign, Braces } from 'lucide-react';
+import { ChevronDown, ChevronsUpDown, Dot, Hash, Lock, Plus, Search, MessageSquare, AtSign, Braces, CornerDownRight } from 'lucide-react';
 
 import { Workspace, Channel, DirectMessage, User } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { DarkModeToggle } from './dark-mode-toggle';
 import { UserAvatar } from './user-avatar';
+import { useNotifications } from '@/hooks/use-notifications';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AddChannelDialog } from './add-channel-dialog';
 import { GlobalSearchDialog } from './global-search-dialog';
 import { NewDmDialog } from './new-dm-dialog';
+import ThreadsList from './threads-list';
 
 interface ChannelSidebarProps {
   workspace: Workspace;
@@ -42,6 +44,9 @@ export default function ChannelSidebar({
   const [isAddChannelOpen, setAddChannelOpen] = useState(false);
   const [isNewDmOpen, setNewDmOpen] = useState(false);
   const [isSearchOpen, setSearchOpen] = useState(false);
+  
+  // Use the notifications hook to get real unread counts
+  const { unreadCounts, isLoading: notificationsLoading, markAsReadWhenViewed } = useNotifications(params.workspaceId);
 
 
   const handleAddChannel = (data: { name: string; description?: string; isPrivate: boolean }) => {
@@ -124,19 +129,45 @@ export default function ChannelSidebar({
                 </Button>
               </div>
               <CollapsibleContent className="mt-2 flex flex-col gap-1">
-                {channels.map((channel) => (
-                  <SidebarLink
-                    key={channel.id}
-                    href={`/w/${params.workspaceId}/c/${channel.id}`}
-                    label={channel.name}
-                    icon={channel.isPrivate ? Lock : Hash}
-                    isActive={params.channelId === channel.id}
-                    isUnread={channel.unreadCount > 0}
-                    badgeCount={channel.unreadCount}
-                  />
-                ))}
+                {channels.map((channel) => {
+                  const conversationId = `channel-${channel.id}`;
+                  const unreadCount = unreadCounts[conversationId] || 0;
+                  
+                  return (
+                    <SidebarLink
+                      key={channel.id}
+                      href={`/w/${params.workspaceId}/c/${channel.id}`}
+                      label={channel.name}
+                      icon={channel.isPrivate ? Lock : Hash}
+                      isActive={params.channelId === channel.id}
+                      isUnread={unreadCount > 0}
+                      badgeCount={unreadCount}
+                      conversationId={conversationId}
+                    />
+                  );
+                })}
               </CollapsibleContent>
             </Collapsible>
+
+            {/* Threads Section - Only show when a channel is selected */}
+            {params.channelId && (
+              <Collapsible defaultOpen>
+                <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-sidebar-foreground/80 hover:text-sidebar-foreground">
+                  <CollapsibleTrigger asChild>
+                    <button className="flex flex-1 cursor-pointer items-center gap-1">
+                      <ChevronDown className="h-4 w-4" />
+                      <span>Threads</span>
+                    </button>
+                  </CollapsibleTrigger>
+                </div>
+                <CollapsibleContent className="mt-2">
+                  <ThreadsList 
+                    channelId={params.channelId} 
+                    workspaceId={params.workspaceId} 
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             <Collapsible defaultOpen>
               <div className="flex w-full items-center justify-between px-2 text-sm font-bold text-sidebar-foreground/80 hover:text-sidebar-foreground">
@@ -154,6 +185,10 @@ export default function ChannelSidebar({
                 {dms.map((dm) => {
                   const user = users.find((u) => u.id === dm.userId);
                   if (!user) return null;
+                  
+                  const conversationId = `dm-${dm.userId}`;
+                  const unreadCount = unreadCounts[conversationId] || 0;
+                  
                   return (
                     <SidebarLink
                       key={dm.id}
@@ -161,8 +196,9 @@ export default function ChannelSidebar({
                       label={user.displayName}
                       icon={<UserAvatar user={user} className="h-5 w-5" />}
                       isActive={params.userId === dm.userId}
-                      isUnread={dm.unreadCount > 0}
-                      badgeCount={dm.unreadCount}
+                      isUnread={unreadCount > 0}
+                      badgeCount={unreadCount}
+                      conversationId={conversationId}
                     />
                   );
                 })}
@@ -194,26 +230,37 @@ const SidebarNavItem = ({ icon: Icon, label, href }: { icon: React.ElementType, 
     </Link>
 );
 
-const SidebarLink = ({ href, label, icon: Icon, isActive, isUnread, badgeCount }: {
+const SidebarLink = ({ href, label, icon: Icon, isActive, isUnread, badgeCount, conversationId }: {
   href: string;
   label: string;
   icon: React.ElementType | React.ReactNode;
   isActive: boolean;
   isUnread: boolean;
   badgeCount: number;
+  conversationId?: string;
 }) => {
+  console.log('🔍 SidebarLink: Rendering with label:', label, 'isActive:', isActive);
+  
+  const handleClick = () => {
+    if (conversationId && isUnread) {
+      // Mark as read when clicked
+      markAsReadWhenViewed(conversationId);
+    }
+  };
+  
   return (
     <Link
       href={href}
+      onClick={handleClick}
       className={cn(
         'group flex items-center justify-between rounded-md px-2 py-1 text-base',
         isActive ? 'bg-sidebar-primary text-sidebar-primary-foreground' : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
         isUnread && !isActive && 'font-bold text-sidebar-accent-foreground'
       )}
     >
-      <div className="flex items-center gap-2 overflow-hidden">
+      <div className="flex items-center gap-2 min-w-0">
         {React.isValidElement(Icon) ? Icon : <Icon className="h-4 w-4 opacity-70" />}
-        <span className="truncate">{label}</span>
+        <span className="whitespace-nowrap text-sm" title={label}>{label}</span>
       </div>
       {badgeCount > 0 && (
         <span className={cn(

@@ -18,6 +18,30 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Adicionar configurações para evitar erros
+  experimental: {
+    // Desabilitar turbopack temporariamente se causar problemas
+    turbo: {
+      rules: {
+        '*.svg': {
+          loaders: ['@svgr/webpack'],
+          as: '*.js',
+        },
+      },
+    },
+  },
+  // Configurações de build mais robustas
+  webpack: (config, { isServer }) => {
+    // Adicionar fallbacks para módulos que podem não existir
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      fs: false,
+      net: false,
+      tls: false,
+    };
+    
+    return config;
+  },
 };
 
 export default nextConfig;

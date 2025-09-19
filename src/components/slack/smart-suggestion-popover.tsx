@@ -45,7 +45,7 @@ export default function SmartSuggestionPopover({
                   onClick={() => onSelect(item.name)}
                 >
                   {item.type === 'user' ? (
-                    <UserAvatar user={{...item, avatarUrl: `https://i.pravatar.cc/40?u=${item.id}`, status: 'online', handle: item.name}} className="h-6 w-6" />
+                    <UserAvatar user={{...item, avatarUrl: `https://i.pravatar.cc/40?u=${item.id}`, status: 'online', handle: item.name, displayName: item.name}} className="h-6 w-6" />
                   ) : (
                     <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
                       <Hash className="h-4 w-4 text-muted-foreground" />

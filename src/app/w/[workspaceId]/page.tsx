@@ -1,0 +1,171 @@
+'use client';
+
+import { useState, createContext, useContext } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { useWorkspaceChannels } from '@/hooks';
+import { useWorkspaceUsers } from '@/hooks/use-workspace-users';
+import { CreateChannelDialog } from '@/components/slack/create-channel-dialog';
+import WorkspaceSidebar from '@/components/slack/workspace-sidebar';
+import ChannelPage from '@/components/slack/channel-page';
+import DMPage from '@/components/slack/dm-page';
+import RightPane from '@/components/slack/right-pane';
+import { ConversationsView } from '@/components/slack/conversations-view';
+import { ActivityView } from '@/components/slack/activity-view';
+import { PeopleView } from '@/components/slack/people-view';
+
+type SidebarView = 'home' | 'conversations' | 'activity' | 'people';
+
+interface SidebarContextType {
+  activeView: SidebarView;
+  setActiveView: (view: SidebarView) => void;
+}
+
+const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
+
+export function useSidebarContext() {
+  const context = useContext(SidebarContext);
+  if (!context) {
+    throw new Error('useSidebarContext must be used within a SidebarProvider');
+  }
+  return context;
+}
+
+export default function WorkspacePage() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const workspaceId = params.workspaceId as string;
+  const selectedChannelId = searchParams.get('channel');
+  const selectedDMUserId = searchParams.get('dm');
+  
+  const [activeView, setActiveView] = useState<SidebarView>('home');
+
+  const { channels, isLoading, error } = useWorkspaceChannels(workspaceId);
+  const { users } = useWorkspaceUsers(workspaceId);
+
+  const handleChannelClick = (channelId: string) => {
+    // Reset to home view when clicking on a channel
+    setActiveView('home');
+    // Navigate to channel using Next.js router
+    router.push(`/w/${workspaceId}?channel=${channelId}`);
+  };
+
+  const handleUserClick = (userId: string) => {
+    // Reset to home view when clicking on a user
+    setActiveView('home');
+    // Navigate to DM using Next.js router
+    router.push(`/w/${workspaceId}?dm=${userId}`);
+  };
+
+  const renderMainContent = () => {
+    switch (activeView) {
+      case 'conversations':
+        return (
+          <ConversationsView
+            workspaceId={workspaceId}
+            channels={channels}
+            directMessages={[]} // TODO: Get from hook
+            users={users}
+            onChannelClick={handleChannelClick}
+            onUserClick={handleUserClick}
+          />
+        );
+      
+      case 'activity':
+        return (
+          <ActivityView
+            workspaceId={workspaceId}
+            channels={channels}
+            directMessages={[]} // TODO: Get from hook
+            users={users}
+            onChannelClick={handleChannelClick}
+            onUserClick={handleUserClick}
+          />
+        );
+
+      case 'people':
+        return (
+          <PeopleView
+            workspaceId={workspaceId}
+            users={users}
+            onUserClick={handleUserClick}
+          />
+        );
+      
+      case 'home':
+      default:
+        if (selectedChannelId) {
+          return (
+            <ChannelPage 
+              workspaceId={workspaceId} 
+              channelId={selectedChannelId}
+              channels={channels}
+            />
+          );
+        } else if (selectedDMUserId) {
+          return (
+            <DMPage 
+              workspaceId={workspaceId} 
+              userId={selectedDMUserId}
+              users={users}
+            />
+          );
+        } else {
+          return (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold mb-2">Selecione um canal ou conversa</h2>
+                <p className="text-muted-foreground">Escolha um canal ou conversa direta na barra lateral para começar a conversar.</p>
+                {channels.length === 0 && (
+                  <div className="mt-4">
+                    <CreateChannelDialog workspaceId={workspaceId} />
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+    }
+  };
+
+  return (
+    <SidebarContext.Provider value={{ activeView, setActiveView }}>
+      <div className="flex h-screen bg-background w-full">
+        
+        {/* Left Sidebar - Workspace Navigation */}
+        <WorkspaceSidebar workspaceId={workspaceId} />
+        
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {renderMainContent()}
+        </div>
+        
+        {/* Right Pane for Threads */}
+        {(selectedChannelId || selectedDMUserId) && activeView === 'home' ? (
+          <div className="flex-shrink-0">
+            <RightPane 
+              conversation={selectedChannelId ? {
+                id: selectedChannelId,
+                workspaceId: workspaceId,
+                name: channels.find(c => c.id === selectedChannelId)?.name || 'Channel',
+                description: '',
+                isPrivate: false,
+                unreadCount: 0,
+                members: []
+              } : selectedDMUserId ? {
+                id: selectedDMUserId,
+                workspaceId: workspaceId,
+                name: users.find(u => u.id === selectedDMUserId)?.display_name || 'DM',
+                description: '',
+                isPrivate: true,
+                unreadCount: 0,
+                members: []
+              } : undefined}
+              users={users}
+            />
+          </div>
+        ) : null}
+      </div>
+    </SidebarContext.Provider>
+  );
+}

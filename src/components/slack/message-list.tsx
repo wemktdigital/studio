@@ -4,18 +4,19 @@
 import React, { useState, useEffect } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { Message, User, Channel } from '@/lib/types';
-import { MessageItem } from './message';
+import MessageItem from './message';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Hash } from 'lucide-react';
 import { UserAvatar } from './user-avatar';
-import { users as allUsers } from '@/lib/data';
+import { useChannelThreads } from '@/hooks/use-threads';
 
 interface MessageListProps {
   messages: Message[];
   users: User[];
   conversation: Channel | User | undefined;
+  workspaceId?: string;
 }
 
 const DateDivider = ({ date }: { date: Date }) => {
@@ -47,7 +48,9 @@ const DateDivider = ({ date }: { date: Date }) => {
 };
 
 const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
-  const members = channel.members.map(id => allUsers.find(u => u.id === id)).filter(Boolean) as User[];
+  // ✅ ATUALIZADO: Usar dados reais dos usuários
+  const members: User[] = []; // Será implementado quando tivermos acesso aos usuários do workspace
+  
   const creator = members[0];
 
   return (
@@ -78,59 +81,78 @@ const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
   )
 }
 
+export default function MessageList({ messages, users, conversation, workspaceId }: MessageListProps) {
+  // Debug log - VERY VISIBLE
+  console.log('🚨🚨🚨 MessageList: RENDERING NOW! 🚨🚨🚨', { 
+    messageCount: messages.length, 
+    usersCount: users.length,
+    conversationId: conversation?.id,
+    conversationName: conversation ? ('name' in conversation ? conversation.name : conversation.displayName) : 'Unknown',
+    workspaceId,
+    timestamp: new Date().toISOString(),
+    messages: messages, // Log the actual messages array
+    users: users, // Log the actual users array
+    firstMessage: messages[0],
+    firstUser: users[0]
+  });
 
-export default function MessageList({ messages, users, conversation }: MessageListProps) {
   if (messages.length === 0) {
-    if (conversation && 'isPrivate' in conversation) {
-      return <EmptyChannelWelcome channel={conversation} />;
-    }
+    console.log('🚨🚨🚨 MessageList: NO MESSAGES, showing empty state');
     return (
       <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 p-8 text-center" data-testid="empty-message-list">
         <div className="rounded-full bg-muted p-4">
-          <Hash className="h-10 w-10 text-muted-foreground" />
+          <Hash className="h-8 w-8 text-muted-foreground" />
         </div>
-        <h3 className="text-xl font-bold">No messages yet</h3>
-        <p className="text-muted-foreground">
-          Send a message to start the conversation.
-        </p>
+        {conversation && 'name' in conversation ? (
+          <EmptyChannelWelcome channel={conversation} />
+        ) : (
+          <>
+            <h3 className="text-lg font-semibold">No messages yet</h3>
+            <p className="text-muted-foreground">
+              Start the conversation by sending a message!
+            </p>
+          </>
+        )}
       </div>
     );
   }
 
-  const messageGroups: React.ReactNode[] = [];
-  let lastDate: Date | null = null;
+  console.log('🚨🚨🚨 MessageList: HAS MESSAGES, processing', messages.length, 'messages');
 
-  messages.forEach((message, index) => {
-    const currentDate = new Date(message.createdAt);
-    if (!lastDate || !isSameDay(currentDate, lastDate)) {
-      messageGroups.push(<DateDivider key={`divider-${message.id}`} date={currentDate} />);
-    }
-
-    const previousMessage = messages[index - 1];
-    const nextMessage = messages[index + 1];
-    const author = users.find(u => u.id === message.authorId);
-
-    const isFirstInGroup = !previousMessage || previousMessage.authorId !== message.authorId || !isSameDay(new Date(previousMessage.createdAt), currentDate);
-    const isLastInGroup = !nextMessage || nextMessage.authorId !== message.authorId || !isSameDay(new Date(nextMessage.createdAt), currentDate);
+  // Group messages by date
+  const groupedMessages = messages.reduce((groups, message) => {
+    const date = new Date(message.createdAt);
+    const dateKey = format(date, 'yyyy-MM-dd');
     
-    if (author) {
-      messageGroups.push(
-        <MessageItem
-          key={message.id}
-          message={message}
-          author={author}
-          isFirstInGroup={isFirstInGroup}
-          isLastInGroup={isLastInGroup}
-        />
-      );
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
     }
-    lastDate = currentDate;
-  });
+    groups[dateKey].push(message);
+    
+    return groups;
+  }, {} as Record<string, Message[]>);
+
+  console.log('🚨🚨🚨 MessageList: Grouped messages:', Object.keys(groupedMessages));
 
   return (
-    <ScrollArea className="h-full flex-1" data-testid="message-list">
-      <div className="px-6 py-4">
-        {messageGroups}
+    <ScrollArea className="flex-1 h-full">
+      <div className="p-4 space-y-4">
+        {Object.entries(groupedMessages).map(([dateKey, dateMessages]) => (
+          <div key={dateKey}>
+            <DateDivider date={new Date(dateKey)} />
+            <div className="space-y-4">
+              {dateMessages.map((message) => (
+                <MessageItem
+                  key={message.id}
+                  message={message}
+                  users={users}
+                  conversation={conversation}
+                  workspaceId={workspaceId}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </ScrollArea>
   );

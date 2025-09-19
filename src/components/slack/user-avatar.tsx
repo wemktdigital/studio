@@ -28,21 +28,21 @@ export function UserAvatar({ user, className, showName = false }: UserAvatarProp
   const statusPositionClass = statusSizeClasses[sizeClass] || 'h-3 w-3 bottom-0 right-0';
 
   return (
-    <div className={cn("flex items-center gap-2", showName && 'w-full')} data-testid={`user-avatar-${user.id}`}>
+    <div className={cn("flex items-center gap-2", showName && 'w-full')} data-testid={`user-avatar-${user.id || 'unknown'}`}>
       <div className="relative shrink-0">
         <Avatar className={cn('h-9 w-9', className)}>
-          <AvatarImage src={user.avatarUrl} alt={user.displayName} />
-          <AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback>
+          <AvatarImage src={user.avatarUrl || undefined} alt={user.displayName || 'User'} />
+          <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
         </Avatar>
         <div
           className={cn(
             'absolute rounded-full border-2 border-background',
-            statusClasses[user.status],
+            statusClasses[user.status || 'offline'],
             statusPositionClass
           )}
         />
       </div>
-      {showName && <span className="font-medium truncate">{user.displayName}</span>}
+      {showName && <span className="font-medium truncate">{user.displayName || 'Unknown User'}</span>}
     </div>
   );
 }

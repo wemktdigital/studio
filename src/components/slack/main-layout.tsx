@@ -1,59 +1,54 @@
 'use client';
 
-import React from 'react';
-import WorkspaceSidebar from './workspace-sidebar';
-import ChannelSidebar from './channel-sidebar';
-import RightPane from './right-pane';
-import { Workspace, Channel, DirectMessage, User, Message } from '@/lib/types';
-import { RightPaneProvider } from '@/hooks/use-right-pane';
+import React, { ReactNode, useEffect } from 'react'
+import { useParams } from 'next/navigation'
+
+
+import WorkspaceSidebar from './workspace-sidebar'
+
+
+import { NotificationPermissionBanner } from './notification-permission-banner'
+
+import { UserLevelManager } from './user-level-manager'
+// import { LocalDataDebugger } from '../debug/local-data-debugger'
 
 interface MainLayoutProps {
-  workspaces: Workspace[];
-  users: User[];
-  currentWorkspace: Workspace;
-  channels: Channel[];
-  dms: DirectMessage[];
-  currentConversation: Channel | User | undefined;
-  messages: Message[];
-  children: React.ReactNode;
-  params: { workspaceId: string; channelId?: string; userId?: string; };
+  children: ReactNode
+  workspaceId?: string
+  channelId?: string
 }
 
-function MainLayoutContent({
-  workspaces,
-  users,
-  currentWorkspace,
-  channels,
-  dms,
-  currentConversation,
-  children,
-  params,
-}: MainLayoutProps) {
+export default function MainLayout({ children, workspaceId, channelId }: MainLayoutProps) {
+  const params = useParams();
+  const actualWorkspaceId = workspaceId || params.workspaceId as string;
+  const actualChannelId = channelId || params.channelId as string;
+  
+  // Memoize the workspaceId to prevent unnecessary re-renders
+  const memoizedWorkspaceId = React.useMemo(() => actualWorkspaceId, [actualWorkspaceId]);
+  
+
+  
+
+  
+
+
   return (
-    <div className="flex h-screen w-full bg-background text-foreground" data-testid="main-layout">
-      <WorkspaceSidebar workspaces={workspaces} activeWorkspaceId={params.workspaceId} />
-      <ChannelSidebar
-        workspace={currentWorkspace}
-        channels={channels}
-        dms={dms}
-        users={users}
-        params={params}
-      />
-      <main className="flex flex-1 flex-col overflow-hidden">
-        {children}
-      </main>
-      <RightPane
-        conversation={currentConversation}
-        users={users}
-      />
+    <div className="flex h-screen bg-background">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col">
+        <main className="flex flex-1 flex-col overflow-hidden">
+          {children}
+        </main>
+      </div>
+      
+      {/* Notification Permission Banner */}
+      <NotificationPermissionBanner />
+
+      {/* User Level Manager */}
+      <UserLevelManager />
+      
+      {/* Debug Component */}
+      {/* <LocalDataDebugger /> */}
     </div>
-  );
-}
-
-export default function MainLayout(props: MainLayoutProps) {
-  return (
-    <RightPaneProvider>
-      <MainLayoutContent {...props} />
-    </RightPaneProvider>
-  );
+  )
 }

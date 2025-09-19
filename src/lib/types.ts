@@ -26,15 +26,21 @@ export type Channel = {
 
 export type DirectMessage = {
   id: string;
-  userId: string; // The other user in the DM
-  lastMessageAt: string;
-  unreadCount: number;
+  user1_id: string;
+  user2_id: string;
+  created_at: string;
+  // Campos computados para compatibilidade com UI
+  otherUserId?: string; // ID do outro usuário (não o atual)
+  lastMessageAt?: string;
+  unreadCount?: number;
 };
 
 export type MessageReaction = {
+  id: string;
   emoji: string;
   count: number;
   users: string[]; // array of user IDs who reacted
+  hasReacted: boolean; // whether the current user has reacted
 };
 
 export type Message = {
@@ -45,12 +51,28 @@ export type Message = {
   content: string;
   type: 'text' | 'image' | 'code' | 'link';
   createdAt: string;
+  updatedAt?: string;
   reactions: MessageReaction[];
   attachment?: {
     name: string;
     url: string;
   };
   dataAiHint?: string;
+  mentions?: MessageMention[];
+};
+
+export type MessageMention = {
+  id: string;
+  messageId: string;
+  mentionedUserId: string;
+  mentionedByUserId: string;
+  channelId?: string;
+  dmId?: string;
+  isRead: boolean;
+  createdAt: string;
+  updatedAt: string;
+  mentionedUser?: User;
+  mentionedByUser?: User;
 };
 
 export type PinnedMessage = {
@@ -73,6 +95,53 @@ export type File = {
 export type Thread = {
   id: string;
   originalMessageId: string;
-  messages: Message[];
-  participants: string[]; // user IDs
+  channelId?: string;
+  dmId?: string;
+  title: string;
+  participantCount: number;
+  messageCount: number;
+  lastActivityAt: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: ThreadMessage[];
+  participants: ThreadParticipant[];
 };
+
+export type ThreadMessage = {
+  id: string;
+  threadId: string;
+  messageId: string;
+  userId: string;
+  parentMessageId?: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  user?: User;
+  parentMessage?: ThreadMessage;
+};
+
+export type ThreadParticipant = {
+  userId: string;
+  displayName: string;
+  avatarUrl: string;
+  messageCount: number;
+};
+
+// Link Preview Types
+export interface LinkPreview {
+  url: string
+  type: 'youtube' | 'github' | 'image' | 'document' | 'code' | 'generic'
+  title?: string
+  description?: string
+  thumbnail?: string
+  domain: string
+  metadata?: Record<string, any>
+}
+
+export interface LinkMetadata {
+  title?: string
+  description?: string
+  image?: string
+  siteName?: string
+  type?: string
+}
