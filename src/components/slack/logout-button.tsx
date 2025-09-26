@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useAuthContext } from '@/components/providers/auth-provider'
 import { useToast } from '@/hooks/use-toast'
-import { LogOut, User } from 'lucide-react'
+import { LogOut, User, Shield, Clock, Bell, Settings } from 'lucide-react'
+import StatusModal from './status-modal'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
@@ -25,6 +26,9 @@ export function LogoutButton({
 }: LogoutButtonProps) {
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [notificationsPaused, setNotificationsPaused] = useState(false)
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const [userStatus, setUserStatus] = useState('')
   const { user, signOut } = useAuthContext()
   const { toast } = useToast()
   const router = useRouter()
@@ -57,6 +61,36 @@ export function LogoutButton({
     }
   }
 
+  const handleClearStatus = () => {
+    setUserStatus('')
+    toast({
+      title: "Status limpo",
+      description: "Seu status foi redefinido para online.",
+    })
+  }
+
+  const handleStatusChange = (status: string, duration?: string) => {
+    setUserStatus(status)
+    if (duration && duration !== 'never') {
+      // Implementar lógica para remover status após duração
+      console.log(`Status será removido após: ${duration}`)
+    }
+  }
+
+  const handleToggleNotifications = () => {
+    setNotificationsPaused(!notificationsPaused)
+    toast({
+      title: notificationsPaused ? "Notificações ativadas" : "Notificações pausadas",
+      description: notificationsPaused 
+        ? "Você receberá notificações novamente." 
+        : "As notificações foram pausadas.",
+    })
+  }
+
+  const handlePreferences = () => {
+    router.push('/auth/preferences')
+  }
+
   if (!user) {
     return null
   }
@@ -86,19 +120,42 @@ export function LogoutButton({
                   {user.email?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {user.user_metadata?.display_name || 'Usuário'}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user.email}
-                </p>
-              </div>
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user.user_metadata?.display_name || 'Usuário'}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {userStatus || 'Ativo'}
+                    </p>
+                  </div>
             </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleClearStatus}>
+              <Shield className="mr-2 h-4 w-4" />
+              <span>Limpar status</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => {
+                console.log('🔍 Abrindo modal de status...')
+                setIsStatusModalOpen(true)
+              }}
+              className="cursor-pointer"
+            >
+              <Clock className="mr-2 h-4 w-4" />
+              <span>Definir seu status</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleToggleNotifications}>
+              <Bell className="mr-2 h-4 w-4" />
+              <span>{notificationsPaused ? 'Reativar notificações' : 'Pausar notificações'}</span>
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => router.push('/auth/profile')}>
               <User className="mr-2 h-4 w-4" />
               <span>Perfil</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handlePreferences}>
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Preferências</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
@@ -106,7 +163,7 @@ export function LogoutButton({
               className="text-destructive focus:text-destructive"
             >
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Sair</span>
+              <span>Sair de {user.user_metadata?.display_name || 'Studio'}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -181,6 +238,18 @@ export function LogoutButton({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Status Modal */}
+      {console.log('🔍 Renderizando StatusModal:', { isStatusModalOpen, userStatus })}
+      <StatusModal
+        isOpen={isStatusModalOpen}
+        onClose={() => {
+          console.log('🔍 Fechando modal de status...')
+          setIsStatusModalOpen(false)
+        }}
+        currentStatus={userStatus}
+        onStatusChange={handleStatusChange}
+      />
     </>
   )
 }

@@ -18,15 +18,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Adicionar configurações para evitar erros
-  experimental: {
-    // Desabilitar turbopack temporariamente se causar problemas
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  // Configuração do Turbopack (estável desde Next.js 15)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },

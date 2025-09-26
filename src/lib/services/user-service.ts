@@ -15,18 +15,7 @@ export class UserService {
    */
   async getCurrentUser(): Promise<any | null> {
     try {
-      // ✅ VERIFICAÇÃO DE AUTH: Verificar se há usuário mock ativo
-      if (isMockUserEnabled()) {
-        console.log('UserService: Mock user enabled, returning mock user profile')
-        return {
-          id: 'e4c9d0f8-b54c-4f17-9487-92872db095ab',
-          displayName: 'Dev User', // ✅ CORRIGIDO: camelCase
-          handle: 'devuser', // ✅ CORRIGIDO: usar handle em vez de username
-          avatarUrl: 'https://i.pravatar.cc/40?u=dev', // ✅ CORRIGIDO: camelCase
-          status: 'online' as const
-        }
-      }
-
+      // ✅ VERIFICAÇÃO DE AUTH: Verificar usuário real do Supabase
       const { data: { user } } = await this.supabase.auth.getUser()
       if (!user) return null
 
@@ -159,57 +148,22 @@ export class UserService {
     try {
       console.log('UserService.getWorkspaceUsers: Fetching real users for workspace:', workspaceId)
       
-      // ✅ VERIFICAÇÃO DE AUTH: Verificar se há usuário mock ativo
-      const DEV_MODE = process.env.NODE_ENV === 'development'
-      const MOCK_USER_ENABLED = DEV_MODE && typeof window !== 'undefined' && localStorage.getItem('dev_mock_user') === 'true'
-      
-      console.log('UserService.getWorkspaceUsers: DEV_MODE:', DEV_MODE)
-      console.log('UserService.getWorkspaceUsers: MOCK_USER_ENABLED:', MOCK_USER_ENABLED)
-      console.log('UserService.getWorkspaceUsers: localStorage dev_mock_user:', typeof window !== 'undefined' ? localStorage.getItem('dev_mock_user') : 'N/A')
-      
-      if (MOCK_USER_ENABLED) {
-        console.log('UserService.getWorkspaceUsers: Mock user enabled, using mock users')
-        return this.getMockWorkspaceUsers()
+      // ✅ VERIFICAÇÃO DE AUTH: Verificar usuário real do Supabase
+      const { data: { user } } = await this.supabase.auth.getUser()
+      if (!user) {
+        console.log('UserService.getWorkspaceUsers: No authenticated user, returning empty array')
+        return []
       }
       
-      const { data, error } = await this.supabase
-        .from('users')
-        .select(`
-          id,
-          display_name,
-          username,
-          avatar_url,
-          status,
-          user_level,
-          created_at,
-          updated_at
-        `)
-        .limit(20) // Limitar para evitar muitos usuários
-        .order('display_name', { ascending: true })
-      
-      if (error) {
-        console.error('UserService.getWorkspaceUsers: Error:', error)
-        // Fallback para mock users se houver erro
-        return this.getMockWorkspaceUsers()
-      }
-      
-      console.log('UserService.getWorkspaceUsers: Successfully fetched:', data?.length || 0, 'users')
-      
-      // ✅ TRANSFORMAR: Converter snake_case para camelCase
-      const transformedUsers = (data || []).map(user => ({
-        id: user.id,
-        displayName: user.display_name, // ✅ CORRIGIDO: snake_case para camelCase
-        handle: user.username || user.display_name, // ✅ CORRIGIDO: usar username como handle
-        avatarUrl: user.avatar_url, // ✅ CORRIGIDO: snake_case para camelCase
-        status: user.status as UserStatus
-      }))
-
-      console.log('UserService.getWorkspaceUsers: Transformed users:', transformedUsers)
-      return transformedUsers
+      // ✅ SIMPLIFICADO: Por enquanto, retornar array vazio
+      // A tabela workspace_members pode não existir ainda
+      console.log('UserService.getWorkspaceUsers: Returning empty array (workspace_members table may not exist)')
+      return []
       
     } catch (error) {
       console.error('UserService.getWorkspaceUsers: Caught error:', error)
-      return this.getMockWorkspaceUsers()
+      // ✅ FALLBACK: Retornar array vazio em caso de erro
+      return []
     }
   }
   

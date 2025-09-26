@@ -45,7 +45,7 @@ export default function MainLayout({ children, workspaceId, channelId }: MainLay
       <NotificationPermissionBanner />
 
       {/* User Level Manager */}
-      <UserLevelManager />
+      <UserLevelManager workspaceId={actualWorkspaceId} />
       
       {/* Debug Component */}
       {/* <LocalDataDebugger /> */}

@@ -65,8 +65,8 @@ export default function ChannelSidebar({
     <>
       <AddChannelDialog
         isOpen={isAddChannelOpen}
-        onOpenChange={setAddChannelOpen}
-        onSubmit={handleAddChannel}
+        onClose={() => setAddChannelOpen(false)}
+        workspaceId={params.workspaceId}
       />
       <GlobalSearchDialog
         isOpen={isSearchOpen}

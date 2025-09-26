@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Crown, Shield, User, Users, Settings, AlertTriangle } from 'lucide-react'
+import { Crown, Shield, User, Users, Settings, AlertTriangle, Loader2 } from 'lucide-react'
 import { useUserLevels } from '@/hooks/use-user-levels'
+import { useWorkspaceUsersAdmin } from '@/hooks/use-workspace-users-admin'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,11 @@ const levelColors = {
   banned: 'bg-black text-white'
 }
 
-export function UserLevelManager() {
+interface UserLevelManagerProps {
+  workspaceId: string
+}
+
+export function UserLevelManager({ workspaceId }: UserLevelManagerProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [selectedUser, setSelectedUser] = useState<string | null>(null)
   const [newLevel, setNewLevel] = useState<string>('')
@@ -41,6 +46,12 @@ export function UserLevelManager() {
     updateUserLevel,
     isLoadingUserLevel 
   } = useUserLevels()
+  
+  const {
+    workspaceUsers,
+    isLoadingUsers,
+    updateUserLevel: updateWorkspaceUserLevel
+  } = useWorkspaceUsersAdmin(workspaceId)
   
   const { toast } = useToast()
 
@@ -63,7 +74,7 @@ export function UserLevelManager() {
     if (!selectedUser || !newLevel) return
 
     try {
-      await updateUserLevel.mutateAsync({ 
+      await updateWorkspaceUserLevel.mutateAsync({ 
         userId: selectedUser, 
         newLevel 
       })
@@ -159,8 +170,35 @@ export function UserLevelManager() {
                       <SelectValue placeholder="Selecionar usuário" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user1">Usuário 1</SelectItem>
-                      <SelectItem value="user2">Usuário 2</SelectItem>
+                      {isLoadingUsers ? (
+                        <div className="flex items-center justify-center p-2">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="ml-2 text-sm">Carregando usuários...</span>
+                        </div>
+                      ) : workspaceUsers.length === 0 ? (
+                        <div className="p-2 text-sm text-muted-foreground">
+                          Nenhum usuário encontrado
+                        </div>
+                      ) : (
+                        workspaceUsers.map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={user.avatarUrl} />
+                                <AvatarFallback className="text-xs">
+                                  {user.displayName?.charAt(0) || 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{user.displayName}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {user.userLevel} • {user.status}
+                                </span>
+                              </div>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   
@@ -178,10 +216,10 @@ export function UserLevelManager() {
                   
                   <Button 
                     onClick={handleUpdateUserLevel}
-                    disabled={!selectedUser || !newLevel || updateUserLevel.isPending}
+                    disabled={!selectedUser || !newLevel || updateWorkspaceUserLevel.isPending}
                     className="w-full"
                   >
-                    {updateUserLevel.isPending ? (
+                    {updateWorkspaceUserLevel.isPending ? (
                       <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                     ) : (
                       'Atualizar Nível'

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, ChevronDown, Send, Paperclip, Smile, AtSign, Video } from 'lucide-react';
+import { X, ChevronDown, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -185,23 +185,11 @@ export function ThreadPanel({
                 htmlFor="also-send-dm"
                 className="text-xs text-muted-foreground cursor-pointer"
               >
-                Também enviar como mensagem direta
+                Também enviar como mensagem no canal
               </label>
             </div>
             
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Paperclip className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Smile className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <AtSign className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <Video className="h-4 w-4" />
-              </Button>
               <Button 
                 size="sm" 
                 onClick={handleSendReply}

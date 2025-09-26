@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import { Message, User, Channel } from '@/lib/types';
 import MessageItem from './message';
@@ -82,6 +82,8 @@ const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
 }
 
 export default function MessageList({ messages, users, conversation, workspaceId }: MessageListProps) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
   // Debug log - VERY VISIBLE
   console.log('🚨🚨🚨 MessageList: RENDERING NOW! 🚨🚨🚨', { 
     messageCount: messages.length, 
@@ -95,6 +97,13 @@ export default function MessageList({ messages, users, conversation, workspaceId
     firstMessage: messages[0],
     firstUser: users[0]
   });
+
+  // ✅ AUTO-SCROLL: Scroll para a última mensagem quando novas mensagens chegam
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
 
   if (messages.length === 0) {
     console.log('🚨🚨🚨 MessageList: NO MESSAGES, showing empty state');
@@ -153,6 +162,8 @@ export default function MessageList({ messages, users, conversation, workspaceId
             </div>
           </div>
         ))}
+        {/* ✅ AUTO-SCROLL: Referência para scroll automático */}
+        <div ref={messagesEndRef} />
       </div>
     </ScrollArea>
   );

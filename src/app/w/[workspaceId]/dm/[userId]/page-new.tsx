@@ -9,7 +9,6 @@ import { UserAvatar } from '@/components/slack/user-avatar'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
-import { MockUserDebug } from '@/components/debug/mock-user-debug'
 
 export default function DirectMessagePageNew() {
   const params = useParams()
@@ -92,9 +91,6 @@ export default function DirectMessagePageNew() {
 
   return (
     <div className="flex-1 flex flex-col h-full">
-      {/* Debug Component - Only in development */}
-      {process.env.NODE_ENV === 'development' && <MockUserDebug />}
-      
       {/* Header */}
       <div className="flex items-center gap-3 p-4 border-b border-border bg-background">
         <Button

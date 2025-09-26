@@ -13,6 +13,12 @@ interface ChannelPageProps {
 export default function ChannelPage({ workspaceId, channelId, channels }: ChannelPageProps) {
   const { channel, isLoading, error } = useChannel(channelId)
 
+  // ✅ DEBUG: Log dos dados do canal
+  console.log('🔍 ChannelPage: channelId:', channelId);
+  console.log('🔍 ChannelPage: channel data:', channel);
+  console.log('🔍 ChannelPage: isLoading:', isLoading);
+  console.log('🔍 ChannelPage: error:', error);
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -41,6 +47,7 @@ export default function ChannelPage({ workspaceId, channelId, channels }: Channe
         channelId={channelId} 
         channelName={channel.name || 'Canal'} 
         workspaceId={workspaceId}
+        channel={channel}
       />
     </div>
   )

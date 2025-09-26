@@ -3,18 +3,20 @@ export { useAuth } from './use-auth'
 
 // Workspace hooks
 export { useWorkspaces, useWorkspace, useCurrentWorkspace } from './use-workspaces'
+export { useWorkspaceAccess, useIsAdmin } from './use-workspace-access'
 
 // Channel hooks
 export { useChannels, useWorkspaceChannels, useChannel, useCreateChannel } from './use-channels'
 
 // User hooks
 export { useUsers, useCurrentUser, useUser } from './use-users'
+export { useCurrentUserAvatar } from './use-current-user-avatar'
 
 // Message hooks
 export { useChannelMessages, useWorkspaceMessages } from './use-messages'
 
 // Thread hooks
-export { useThreads, useChannelThreads } from './use-threads'
+export { useChannelThreads, useCreateThread, useThreadMessages, useAddThreadMessage } from './use-threads'
 
 // Notification hooks
 export { useNotifications } from './use-notifications'
@@ -47,4 +49,4 @@ export { useNotificationSounds } from './use-notification-sounds'
 export { useUserLevels } from './use-user-levels'
 
 // Workspace users hooks
-export { useWorkspaceUsers, useWorkspaceUsersAdmin } from './use-workspace-users'
+export { useWorkspaceUsers } from './use-workspace-users'

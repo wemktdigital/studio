@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useSidebarContext } from '@/app/w/[workspaceId]/page';
 import { 
   Plus, 
@@ -44,11 +44,12 @@ import { UserAvatar } from './user-avatar';
 import { CreateChannelDialog } from './create-channel-dialog';
 import { NewDMDialog } from './new-dm-dialog';
 import { ChannelManagement } from './channel-management';
-import { useChannelsClient } from '@/hooks/use-channels-client';
+import { useWorkspaceChannels } from '@/hooks/use-channels';
 import { useWorkspaceUsersAdmin } from '@/hooks/use-workspace-users-admin';
 import { useUserLevels } from '@/hooks/use-user-levels';
 import { useDirectMessages } from '@/hooks/use-direct-messages';
 import { useUnreadCounts } from '@/hooks/use-unread-counts';
+import { useWorkspace } from '@/hooks/use-workspaces';
 import { cn } from '@/lib/utils';
 
 interface WorkspaceSidebarProps {
@@ -58,32 +59,29 @@ interface WorkspaceSidebarProps {
 export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps) {
   const router = useRouter();
   const params = useParams();
-  const currentChannelId = params.channelId as string;
-  const currentUserId = params.userId as string;
+  const searchParams = useSearchParams();
+  
+  // ✅ CORRIGIDO: Obter channelId tanto de path params quanto de query params
+  const currentChannelId = params.channelId as string || searchParams.get('channel');
+  const currentUserId = params.userId as string || searchParams.get('dm');
+  
+  // ✅ DEBUG: Log dos parâmetros para entender a inconsistência
+  console.log('🔍 WorkspaceSidebar: params:', params);
+  console.log('🔍 WorkspaceSidebar: searchParams:', searchParams.toString());
+  console.log('🔍 WorkspaceSidebar: currentChannelId (path):', params.channelId);
+  console.log('🔍 WorkspaceSidebar: currentChannelId (query):', searchParams.get('channel'));
+  console.log('🔍 WorkspaceSidebar: currentChannelId (final):', currentChannelId);
+  console.log('🔍 WorkspaceSidebar: currentUserId (path):', params.userId);
+  console.log('🔍 WorkspaceSidebar: currentUserId (query):', searchParams.get('dm'));
+  console.log('🔍 WorkspaceSidebar: currentUserId (final):', currentUserId);
   const [isNewDMDialogOpen, setIsNewDMDialogOpen] = useState(false);
   const [isInvitePeopleDialogOpen, setIsInvitePeopleDialogOpen] = useState(false);
   const [isEditWorkspaceDialogOpen, setIsEditWorkspaceDialogOpen] = useState(false);
   const [userStatus, setUserStatus] = useState<'active' | 'away'>('active');
   const [isDirectMessagesExpanded, setIsDirectMessagesExpanded] = useState(false);
   const [isChannelsExpanded, setIsChannelsExpanded] = useState(true);
-  const [workspaceData, setWorkspaceData] = useState(() => {
-    // Tentar carregar dados salvos do localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`workspace-${workspaceId}`);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (error) {
-          console.error('Error parsing saved workspace data:', error);
-        }
-      }
-    }
-    return {
-      name: 'WE Marketing',
-      description: 'Workspace principal da equipe de marketing',
-      isActive: true
-    };
-  });
+  // ✅ CORRIGIDO: Usar hook useWorkspace para carregar dados reais
+  const { workspace, isLoading: isLoadingWorkspace } = useWorkspace(workspaceId);
   const { activeView, setActiveView } = useSidebarContext();
   
   // Don't render if no workspaceId
@@ -96,7 +94,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
   // State for collapsible sections (removed - no longer needed)
   
   // Fetch channels and users
-  const { channels = [], isLoading: channelsLoading, error: channelsError } = useChannelsClient(workspaceId);
+  const { channels = [], isLoading: channelsLoading, error: channelsError } = useWorkspaceChannels(workspaceId);
   
 
   const { data: users = [], isLoading: usersLoading, error: usersError } = useWorkspaceUsersAdmin(workspaceId);
@@ -104,28 +102,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
   const { directMessages, isLoading: dmsLoading } = useDirectMessages(workspaceId);
   const { getUnreadCount, getTotalUnreadCount } = useUnreadCounts(workspaceId);
 
-  // Debug logs
-  console.log('🔍 WorkspaceSidebar: Render info:', {
-    workspaceId,
-    currentChannelId,
-    currentUserId,
-    channelsCount: channels.length,
-    channelsLoading,
-    channelsError,
-    usersCount: users.length,
-    usersLoading,
-    usersError
-  });
-  
-  // Additional debug for channels
-  if (channels.length > 0) {
-    console.log('🔍 WorkspaceSidebar: Channels found:', channels.map(c => ({ id: c.id, name: c.name, workspace_id: c.workspace_id })));
-  } else {
-    console.log('🔍 WorkspaceSidebar: No channels found for workspace:', workspaceId);
-  }
-
   const handleChannelClick = (channelId: string) => {
-    console.log('🔍 WorkspaceSidebar.handleChannelClick: Navigating to channel:', channelId);
     // Reset to home view when clicking on a channel
     setActiveView('home');
     // Navigate to channel using Next.js router (same as in WorkspacePage)
@@ -133,7 +110,6 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
   };
 
   const handleUserClick = (userId: string) => {
-    console.log('🔍 WorkspaceSidebar.handleUserClick: Navigating to DM:', userId);
     // Reset to home view when clicking on a user
     setActiveView('home');
     // Navigate to DM using Next.js router (same as in WorkspacePage)
@@ -188,11 +164,8 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
   };
 
   const handleWorkspaceUpdate = (updatedData: { name: string; description: string; isActive: boolean }) => {
-    setWorkspaceData(updatedData);
-    // Salvar no localStorage para persistir entre recarregamentos
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(`workspace-${workspaceId}`, JSON.stringify(updatedData));
-    }
+    // ✅ CORRIGIDO: Não usar mais estado local, apenas invalidar cache
+    // O hook useWorkspace irá recarregar os dados automaticamente
     console.log('Workspace updated:', updatedData);
   };
 
@@ -208,7 +181,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
                   WE
                 </div>
             <div className="flex items-center gap-1">
-              <h2 className="text-lg font-semibold text-sidebar-foreground">{workspaceData.name}</h2>
+              <h2 className="text-lg font-semibold text-sidebar-foreground">{workspace?.name || 'Workspace'}</h2>
               <ChevronDown className="h-4 w-4 text-sidebar-foreground/60" />
             </div>
               </button>
@@ -219,7 +192,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
                   WE
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{workspaceData.name}</p>
+                  <p className="text-sm font-medium truncate">{workspace?.name || 'Workspace'}</p>
                   <p className="text-xs text-muted-foreground truncate">Workspace ativo</p>
                 </div>
               </div>
@@ -417,7 +390,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
                 </div>
               ) : channelsError ? (
                 <div className="text-xs text-red-400 py-2">
-                  Erro ao carregar canais: {channelsError?.message || String(channelsError)}
+                  Erro ao carregar canais: {channelsError?.message || 'Erro desconhecido'}
                 </div>
               ) : channels.length === 0 ? (
                 <div className="text-xs text-sidebar-foreground/60 py-2">
@@ -429,8 +402,6 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
                     {channels.length} canal{channels.length !== 1 ? 's' : ''} encontrado{channels.length !== 1 ? 's' : ''}
                   </div>
                   {channels.map((channel) => {
-                    console.log('🔍 WorkspaceSidebar: Rendering channel:', channel);
-                    console.log('🔍 WorkspaceSidebar: Including ChannelManagement for channel:', channel.name);
                     return (
                       <div
                         key={channel.id}
@@ -615,7 +586,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
         isOpen={isInvitePeopleDialogOpen}
         onOpenChange={setIsInvitePeopleDialogOpen}
         workspaceId={workspaceId}
-        workspaceName={workspaceData.name}
+        workspaceName={workspace?.name || 'Workspace'}
       />
       
       {/* Edit Workspace Dialog */}
@@ -623,7 +594,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
         isOpen={isEditWorkspaceDialogOpen}
         onOpenChange={setIsEditWorkspaceDialogOpen}
         workspaceId={workspaceId}
-        currentWorkspace={workspaceData}
+        currentWorkspace={workspace}
         onWorkspaceUpdate={handleWorkspaceUpdate}
       />
     </div>

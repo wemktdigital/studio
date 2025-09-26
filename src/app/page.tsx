@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MessageSquare, Users, Hash, Zap } from 'lucide-react'
 import { DynamicHeader } from '@/components/slack/dynamic-header'
-import { DevModeToggle } from '@/components/dev/dev-mode-toggle'
 
 export default function HomePage() {
   return (
@@ -31,11 +30,6 @@ export default function HomePage() {
               </Button>
             </Link>
           </div>
-        </div>
-
-        {/* Dev Mode Toggle */}
-        <div className="mb-8">
-          <DevModeToggle />
         </div>
 
         {/* Features */}

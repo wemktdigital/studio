@@ -5,7 +5,7 @@ import { useAuthContext } from '@/components/providers/auth-provider'
 import { toast } from '@/hooks/use-toast'
 import { messageService } from '@/lib/services/message-service'
 
-export function useDMMessagesSimple(dmId: string) {
+export function useDMMessagesSimple(dmId: string, workspaceId?: string) {
   const queryClient = useQueryClient()
   const { user } = useAuthContext()
   
@@ -20,7 +20,7 @@ export function useDMMessagesSimple(dmId: string) {
     queryKey: ['dm-messages-simple', dmId],
     queryFn: async () => {
       console.log('🚨🚨🚨 useDMMessagesSimple: FETCHING DM MESSAGES VIA MESSAGESERVICE! 🚨🚨🚨')
-      return await messageService.getDirectMessageMessages(dmId, user?.id)
+      return await messageService.getDirectMessageMessages(dmId, user?.id, workspaceId)
     },
     enabled: !!dmId,
     staleTime: 0,

@@ -10,11 +10,13 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { channels as mockChannels, users as mockUsers } from '@/lib/data';
+import { ChannelService } from '@/lib/services/channel-service';
+import { UserService } from '@/lib/services/user-service';
 
 const SmartSuggestionInputSchema = z.object({
   prefix: z.string().describe('The prefix typed by the user, e.g., "@" or "#".'),
   query: z.string().describe('The query string typed by the user after the prefix.'),
+  workspaceId: z.string().optional().describe('The workspace ID to get suggestions from.'),
 });
 export type SmartSuggestionInput = z.infer<typeof SmartSuggestionInputSchema>;
 
@@ -39,14 +41,24 @@ const suggestionTool = ai.defineTool(
     description: 'Get a list of available channels or users to suggest from.',
     input: z.object({
         type: z.enum(['channel', 'user']),
+        workspaceId: z.string().optional(),
     }),
     output: z.array(z.object({ id: z.string(), name: z.string() })),
   },
-  async ({ type }) => {
-    if (type === 'channel') {
-      return mockChannels.map(c => ({ id: c.id, name: c.name }));
-    } else {
-      return mockUsers.map(u => ({ id: u.id, name: u.handle }));
+  async ({ type, workspaceId }) => {
+    try {
+      if (type === 'channel') {
+        const channelService = new ChannelService();
+        const channels = workspaceId ? await channelService.getChannels(workspaceId) : [];
+        return channels.map(c => ({ id: c.id, name: c.name }));
+      } else {
+        const userService = new UserService();
+        const users = workspaceId ? await userService.getWorkspaceUsers(workspaceId) : [];
+        return users.map(u => ({ id: u.id, name: u.handle || u.displayName }));
+      }
+    } catch (error) {
+      console.error('Error fetching suggestion data:', error);
+      return [];
     }
   }
 );
@@ -61,13 +73,14 @@ const smartSuggestionPrompt = ai.definePrompt({
 
 The user is typing in a message composer and has typed a prefix (either "@" for users or "#" for channels) followed by a query string.
 
-- Use the 'getSuggestionData' tool to fetch the list of available users or channels based on the prefix.
+- Use the 'getSuggestionData' tool to fetch the list of available users or channels based on the prefix and workspace.
 - Filter this list to find items that match the user's query. The match should be case-insensitive and can be partial (e.g., 'gen' should match 'general').
 - Return a JSON array of up to 5 suggestions. Each suggestion should include the id, name, and type (channel or user).
 - If no relevant items are found, return an empty array for suggestions.
 
 Prefix: {{{prefix}}}
 Query: {{{query}}}
+Workspace ID: {{{workspaceId}}}
 `,
 });
 

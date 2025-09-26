@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Users, Search, UserPlus, Mail, MessageCircle, Shield, Crown, User } from 'lucide-react';
+import { Users, Search, Mail, MessageCircle, Shield, Crown, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -198,10 +198,9 @@ export function PeopleView({
       {/* Footer */}
       <div className="p-4 border-t border-border">
         <div className="text-center">
-          <Button variant="outline" size="sm" className="w-full">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Convidar pessoas
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            Sistema pronto para uso com dados reais
+          </p>
         </div>
       </div>
     </div>

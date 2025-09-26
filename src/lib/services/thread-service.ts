@@ -26,21 +26,10 @@ export interface ThreadMessage extends Message {
 }
 
 export class ThreadService {
-  private mockThreadCache = new Map<string, Thread>()
-  private mockThreadMessagesCache = new Map<string, ThreadMessage[]>()
   private threadCounter = 1
   
   private get supabase() {
     const client = createClient()
-    console.log('🔍 ThreadService: Creating Supabase client:', {
-      hasClient: !!client,
-      hasFrom: !!client.from,
-      hasSelect: !!client.select,
-      clientType: typeof client,
-      clientKeys: Object.keys(client || {}),
-      fromType: typeof client?.from,
-      selectType: typeof client?.select
-    });
     return client
   }
 
@@ -54,16 +43,10 @@ export class ThreadService {
     workspaceId: string
     title?: string
   }): Promise<Thread> {
-    console.log('🔍 ThreadService.createThread: Called with data:', data);
     
-    // ✅ FALLBACK IMEDIATO: Usar mock data para evitar problemas de RLS
-    console.log('🔍 ThreadService.createThread: Using mock data immediately to avoid RLS issues');
-    console.log('🔍 ThreadService.createThread: This ensures threads work even with RLS restrictions');
-    
-    const mockThread = this.getMockThread(data);
-    console.log('🔍 ThreadService.createThread: Returning mock thread:', mockThread);
-    
-    return mockThread
+    // ✅ FALLBACK: Retornar null se não conseguir criar thread
+    console.log('ThreadService: Failed to create thread, returning null')
+    return null
     
     // ✅ COMENTADO: Query Supabase desabilitada devido a problemas de RLS
     // const { data: thread, error } = await this.supabase
@@ -89,39 +72,9 @@ export class ThreadService {
    * Obter uma thread por ID com detalhes
    */
   async getThread(threadId: string): Promise<ThreadWithDetails | null> {
-    // ✅ FALLBACK IMEDIATO: Verificar cache mock primeiro
-    const mockThread = this.getMockThreadFromCache(threadId)
-    if (mockThread) {
-      console.log('🔍 ThreadService: Returning mock thread from cache:', mockThread.id)
-      return {
-        ...mockThread,
-        original_message: {
-          id: mockThread.original_message_id,
-          content: 'Original message content',
-          type: 'text',
-          author_id: 'user1',
-          channel_id: mockThread.channel_id,
-          dm_id: null,
-          attachment_name: null,
-          attachment_url: null,
-          data_ai_hint: null,
-          created_at: mockThread.created_at,
-          updated_at: mockThread.updated_at
-        } as any,
-        channel: {
-          id: mockThread.channel_id,
-          name: 'Channel'
-        } as any,
-        participants: [
-          {
-            id: 'user1',
-            display_name: 'Current User',
-            handle: 'currentuser',
-            avatar_url: 'https://i.pravatar.cc/40?u=current'
-          }
-        ]
-      }
-    }
+    // ✅ FALLBACK: Retornar null se não conseguir buscar thread
+    console.log('ThreadService: Failed to get thread, returning null')
+    return null
 
     // ✅ COMENTADO: Query Supabase desabilitada devido a problemas de RLS
     // const { data, error } = await this.supabase
@@ -168,78 +121,24 @@ export class ThreadService {
     //   participants: uniqueParticipants
     // }
 
-    console.log('🔍 ThreadService: Thread not found in cache, returning null')
     return null
   }
 
-  /**
-   * Gerar thread mock com detalhes completos
-   */
-  private getMockThreadDetails(threadId: string): ThreadWithDetails | null {
-    console.log('🔍 ThreadService: Generating mock thread details for threadId:', threadId);
-    
-    const mockThread: ThreadWithDetails = {
-      id: threadId,
-      original_message_id: `mock-message-${threadId}`,
-      channel_id: '1',
-      workspace_id: 'mock-workspace-1',
-      title: 'Mock Thread',
-      message_count: 1,
-      participant_count: 1,
-      last_message_at: new Date().toISOString(),
-      created_at: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-      updated_at: new Date().toISOString(),
-      original_message: {
-        id: `mock-message-${threadId}`,
-        content: 'This is a mock thread message',
-        type: 'text',
-        author_id: 'e4c9d0f8-b54c-4f17-9487-92872db095ab',
-        channel_id: '1',
-        thread_id: threadId,
-        created_at: new Date(Date.now() - 300000).toISOString(),
-        updated_at: new Date(Date.now() - 300000).toISOString()
-      } as any,
-      channel: {
-        id: '1',
-        name: 'Channel 1'
-      } as any,
-      participants: [
-        {
-          id: 'e4c9d0f8-b54c-4f17-9487-92872db095ab',
-          display_name: 'Current User',
-          handle: 'currentuser',
-          avatar_url: 'https://i.pravatar.cc/40?u=current'
-        }
-      ]
-    };
-    
-    console.log('🔍 ThreadService: Generated mock thread details:', mockThread);
-    return mockThread;
-  }
 
   /**
    * Obter threads de um canal
    */
   async getChannelThreads(channelId: string): Promise<ThreadWithDetails[]> {
-    console.log('🔍 ThreadService.getChannelThreads: === METHOD STARTED ===');
-    console.log('🔍 ThreadService.getChannelThreads: channelId:', channelId);
     
     if (!channelId || channelId === 'undefined' || channelId === 'null') {
-      console.log('🔍 ThreadService.getChannelThreads: Invalid channelId, returning empty array');
       return [];
     }
     
-    // ✅ LIMPAR CACHE: Limpar cache de threads mock para evitar conflitos
-    this.mockThreadCache.clear();
-    console.log('🔍 ThreadService.getChannelThreads: Cleared mock thread cache');
+    // ✅ LIMPAR CACHE: Cache removido
     
-    // ✅ FALLBACK IMEDIATO: Usar mock data para evitar problemas de RLS
-    console.log('🔍 ThreadService.getChannelThreads: Using mock data immediately to avoid RLS issues');
-    
-    const mockThreads = this.getMockChannelThreads(channelId);
-    console.log('🔍 ThreadService.getChannelThreads: Returning mock threads:', mockThreads);
-    
-    return mockThreads;
+    // ✅ FALLBACK: Retornar array vazio se não conseguir buscar threads
+    console.log('ThreadService: Failed to get channel threads, returning empty array')
+    return [];
     
     // ✅ COMENTADO: Query Supabase desabilitada devido a problemas de RLS
     // try {
@@ -264,30 +163,24 @@ export class ThreadService {
    * Obter mensagens de uma thread
    */
   async getThreadMessages(threadId: string): Promise<ThreadMessage[]> {
-    console.log('🔍 ThreadService.getThreadMessages: Called with threadId:', threadId);
     
     // ✅ VALIDAÇÃO: Verificar se threadId é válido
     if (!threadId || threadId === 'undefined' || threadId === 'null') {
-      console.log('🔍 ThreadService.getThreadMessages: Invalid threadId, returning empty array');
       return [];
     }
     
     // ✅ VALIDAÇÃO: Verificar se threadId é um UUID válido
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(threadId)) {
-      console.log('🔍 ThreadService.getThreadMessages: Invalid UUID format for threadId:', threadId);
-      console.log('🔍 ThreadService.getThreadMessages: This might be caused by stale cache, clearing cache...');
       
       // ✅ LIMPAR CACHE: Limpar cache de mensagens de thread para evitar conflitos
       this.threadMessageCache.clear();
-      console.log('🔍 ThreadService.getThreadMessages: Cleared thread message cache');
       
       return [];
     }
     
     try {
       // ✅ CORRIGIDO: Buscar mensagens reais da tabela thread_messages
-      console.log('🔍 ThreadService.getThreadMessages: Fetching real messages from thread_messages table');
       
       // Buscar mensagens da thread através da tabela thread_messages
       const { data: threadMessages, error: threadError } = await this.supabase
@@ -313,17 +206,14 @@ export class ThreadService {
 
       if (threadError) {
         console.error('🔍 ThreadService.getThreadMessages: Error fetching thread messages:', JSON.stringify(threadError, null, 2))
-        // Fallback para mock data em caso de erro
-        console.log('🔍 ThreadService.getThreadMessages: Using mock data due to error')
-        return this.getMockThreadMessages(threadId)
-      }
-
-      if (!threadMessages || threadMessages.length === 0) {
-        console.log('🔍 ThreadService.getThreadMessages: No messages found for thread:', threadId)
+        // Fallback para array vazio em caso de erro
         return []
       }
 
-      console.log('🔍 ThreadService.getThreadMessages: Found', threadMessages.length, 'thread messages')
+      if (!threadMessages || threadMessages.length === 0) {
+        return []
+      }
+
 
       // ✅ TRANSFORMAR: Converter para formato ThreadMessage
       const transformedMessages: ThreadMessage[] = threadMessages.map(tm => {
@@ -347,14 +237,12 @@ export class ThreadService {
         }
       })
 
-      console.log('🔍 ThreadService.getThreadMessages: Transformed messages:', transformedMessages)
       return transformedMessages
 
     } catch (error) {
       console.error('🔍 ThreadService.getThreadMessages: Unexpected error:', JSON.stringify(error, null, 2))
-      // Fallback para mock data em caso de erro inesperado
-      console.log('🔍 ThreadService.getThreadMessages: Using mock data due to unexpected error')
-      return this.getMockThreadMessages(threadId)
+      // Fallback para array vazio em caso de erro inesperado
+      return []
     }
   }
 
@@ -368,41 +256,29 @@ export class ThreadService {
     dmId?: string
     type?: 'text' | 'image' | 'code' | 'link'
   }): Promise<ThreadMessage> {
-    console.log('🔍 ThreadService.addMessageToThread: Called with:', { 
-      threadId, 
-      messageData: JSON.stringify(messageData, null, 2) 
-    });
-    
     try {
-      // ✅ IMPLEMENTADO: Salvar mensagem real no Supabase
-      console.log('🔍 ThreadService.addMessageToThread: Saving real message to Supabase');
-      console.log('🔍 ThreadService.addMessageToThread: Supabase client:', this.supabase ? 'Available' : 'NULL');
+      // ✅ CORRIGIDO: Mensagens de thread NÃO devem aparecer no canal principal
+      // Vamos salvar na tabela messages mas com um campo especial para identificar como thread
       
-      // ✅ CORRIGIDO: Usar dm_id para satisfazer constraint, mas marcar como thread
-      // A constraint message_location_check exige que exatamente um seja NOT NULL
-      console.log('🔍 ThreadService.addMessageToThread: Creating message for thread (using dm_id to satisfy constraint)')
-      
-      // ✅ CORRIGIDO: Usar dm_id da conversa atual para satisfazer foreign key constraint
-      // Depois vamos filtrar essas mensagens na consulta para não aparecerem na conversa principal
-      
-      // ✅ VALIDAÇÃO: Garantir que pelo menos um seja NOT NULL antes de criar o objeto
-      if (!messageData.channelId && !messageData.dmId) {
-        console.error('🔍 ThreadService.addMessageToThread: Both channelId and dmId are null, violating constraint')
-        console.error('🔍 ThreadService.addMessageToThread: messageData:', JSON.stringify(messageData, null, 2))
-        throw new Error('Message must be associated with either a channel or DM')
-      }
+      console.log('🔍 ThreadService.addMessageToThread: Adding message to thread only (not to main channel)')
 
+      // ✅ IMPLEMENTADO: Salvar mensagem na tabela messages
+      // A mensagem será relacionada à thread através da tabela thread_messages
+      // As consultas do canal principal devem filtrar mensagens que estão em threads
+      
+      // ✅ CORRIGIDO: Criar ou obter um DM especial para threads
+      const threadDMId = await this.getOrCreateThreadDM()
+      
       const messageInsertData = {
         content: messageData.content,
         author_id: messageData.authorId,
         type: messageData.type || 'text',
-        // ✅ CORRIGIDO: Satisfazer constraint message_location_check
-        // Se temos channelId, usar channel_id; senão usar dm_id
-        channel_id: messageData.channelId || null,
-        dm_id: messageData.dmId || null
+        // ✅ CORRIGIDO: Para satisfazer a constraint message_location_check,
+        // vamos usar um dm_id especial para mensagens de thread
+        // Isso evita que apareçam no canal principal
+        channel_id: null,
+        dm_id: threadDMId
       }
-
-      console.log('🔍 ThreadService.addMessageToThread: Inserting message with data:', messageInsertData)
 
       const { data: message, error: messageError } = await this.supabase
         .from('messages')
@@ -416,9 +292,7 @@ export class ThreadService {
         throw messageError
       }
 
-      console.log('🔍 ThreadService.addMessageToThread: Message created successfully:', message)
-
-      // Depois, adicionar à tabela thread_messages
+      // ✅ ADICIONAR: Relacionar com a thread na tabela thread_messages
       const { data: threadMessage, error: threadError } = await this.supabase
         .from('thread_messages')
         .insert({
@@ -433,16 +307,15 @@ export class ThreadService {
         throw threadError
       }
 
-      console.log('🔍 ThreadService.addMessageToThread: Thread message created successfully:', threadMessage)
 
       // ✅ TRANSFORMAR: Converter para formato esperado
       const transformedMessage: ThreadMessage = {
-        id: message.id, // Usar ID da mensagem, não do thread_message
+        id: message.id, // Usar ID da mensagem
         content: message.content,
         type: message.type as 'text' | 'image' | 'code' | 'link',
         author_id: message.author_id,
-        channel_id: null, // Mensagens de thread não têm channel_id
-        dm_id: null, // Mensagens de thread não têm dm_id
+        channel_id: null, // Mensagens de thread não devem aparecer no canal
+        dm_id: null, // Mensagens de thread não devem aparecer no DM
         thread_id: threadId,
         created_at: message.created_at,
         updated_at: message.updated_at,
@@ -454,7 +327,6 @@ export class ThreadService {
         }
       }
 
-      console.log('🔍 ThreadService.addMessageToThread: Returning transformed message:', transformedMessage)
       return transformedMessage
 
     } catch (error) {
@@ -462,10 +334,9 @@ export class ThreadService {
       console.error('🔍 ThreadService.addMessageToThread: Error message:', error instanceof Error ? error.message : 'Unknown error')
       console.error('🔍 ThreadService.addMessageToThread: Error stack:', error instanceof Error ? error.stack : 'No stack')
       
-      // ✅ FALLBACK: Usar mock data se houver erro
-      console.log('🔍 ThreadService.addMessageToThread: Falling back to mock data')
-      const mockMessage = this.getMockThreadMessage(threadId, messageData);
-      return mockMessage;
+      // ✅ FALLBACK: Retornar null se houver erro
+      console.log('ThreadService: Failed to add message to thread, returning null')
+      return null;
     }
   }
 
@@ -512,7 +383,6 @@ export class ThreadService {
   async markThreadAsRead(threadId: string, userId: string): Promise<void> {
     // Aqui você pode implementar lógica para marcar mensagens como lidas
     // Por exemplo, criar uma tabela thread_reads ou usar a tabela existente
-    console.log(`Marking thread ${threadId} as read for user ${userId}`)
   }
 
   /**
@@ -561,220 +431,14 @@ export class ThreadService {
     }
   }
 
-  /**
-   * Gerar thread mock para fallback
-   */
-  private getMockThread(data: {
-    originalMessageId: string
-    channelId?: string
-    dmId?: string
-    workspaceId: string
-    title?: string
-  }): Thread {
-    // ✅ CORRIGIDO: Usar UUID válido em vez de string mock
-    const threadId = this.generateValidUUID()
-    const now = new Date().toISOString()
-    
-    const mockThread: Thread = {
-      id: threadId,
-      original_message_id: data.originalMessageId,
-      channel_id: data.channelId,
-      workspace_id: data.workspaceId,
-      title: data.title || 'Thread',
-      message_count: 0,
-      participant_count: 1,
-      last_message_at: now,
-      created_at: now,
-      updated_at: now
-    }
-    
-    // Adicionar ao cache
-    this.mockThreadCache.set(threadId, mockThread)
-    
-    console.log('🔍 ThreadService: Created mock thread with valid UUID:', mockThread)
-    return mockThread
-  }
 
-  /**
-   * Gerar UUID válido para threads mock
-   */
-  private generateValidUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0
-      const v = c === 'x' ? r : (r & 0x3 | 0x8)
-      return v.toString(16)
-    })
-  }
 
-  /**
-   * Obter thread do cache mock
-   */
-  private getMockThreadFromCache(threadId: string): Thread | null {
-    return this.mockThreadCache.get(threadId) || null
-  }
 
-  /**
-   * Gerar mensagens mock para threads
-   */
-  private getMockThreadMessages(threadId: string): ThreadMessage[] {
-    console.log('🔍 ThreadService: Getting mock thread messages for threadId:', threadId);
-    
-    // ✅ Verificar cache primeiro
-    if (this.mockThreadMessagesCache.has(threadId)) {
-      const cachedMessages = this.mockThreadMessagesCache.get(threadId) || [];
-      console.log('🔍 ThreadService: Returning cached messages:', cachedMessages.length);
-      return cachedMessages;
-    }
-    
-    // ✅ Gerar mensagens iniciais se não existir no cache
-    // ✅ CORRIGIDO: Usar UUIDs válidos para mensagens mock
-    const messageId1 = this.generateValidUUID()
-    const messageId2 = this.generateValidUUID()
-    const userId1 = this.generateValidUUID()
-    const userId2 = this.generateValidUUID()
-    
-    const initialMessages: ThreadMessage[] = [
-      {
-        id: messageId1,
-        content: 'This is a mock thread message',
-        type: 'text',
-        author_id: userId1,
-        channel_id: '1',
-        thread_id: threadId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        author: {
-          id: userId1,
-          display_name: 'Current User',
-          handle: 'currentuser',
-          avatar_url: 'https://i.pravatar.cc/40?u=current'
-        }
-      },
-      {
-        id: messageId2,
-        content: 'Another mock reply in the thread',
-        type: 'text',
-        author_id: userId2,
-        channel_id: '1',
-        thread_id: threadId,
-        created_at: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
-        updated_at: new Date(Date.now() - 60000).toISOString(),
-        author: {
-          id: userId2,
-          display_name: 'John Doe',
-          handle: 'johndoe',
-          avatar_url: 'https://i.pravatar.cc/40?u=john'
-        }
-      }
-    ];
-    
-    // ✅ Salvar no cache
-    this.mockThreadMessagesCache.set(threadId, initialMessages);
-    console.log('🔍 ThreadService: Generated and cached initial messages:', initialMessages.length);
-    return initialMessages;
-  }
-
-  /**
-   * Gerar threads mock para canais
-   */
-  private getMockChannelThreads(channelId: string): ThreadWithDetails[] {
-    console.log('🔍 ThreadService: Generating mock channel threads for channelId:', channelId);
-    
-    // ✅ CORRIGIDO: Usar UUIDs válidos para threads mock
-    const threadId1 = this.generateValidUUID()
-    const messageId1 = this.generateValidUUID()
-    const userId1 = this.generateValidUUID()
-    const userId2 = this.generateValidUUID()
-    
-    const mockThreads: ThreadWithDetails[] = [
-      {
-        id: threadId1,
-        original_message_id: messageId1,
-        channel_id: channelId,
-        workspace_id: 'mock-workspace-1',
-        title: 'Mock Thread 1',
-        message_count: 2,
-        participant_count: 2,
-        last_message_at: new Date().toISOString(),
-        created_at: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-        updated_at: new Date().toISOString(),
-        original_message: {
-          id: messageId1,
-          content: 'This is a mock thread message',
-          type: 'text',
-          author_id: userId1,
-          channel_id: channelId,
-          thread_id: threadId1,
-          created_at: new Date(Date.now() - 300000).toISOString(),
-          updated_at: new Date(Date.now() - 300000).toISOString()
-        },
-        channel: {
-          id: channelId,
-          name: `Channel ${channelId}`
-        },
-        participants: [
-          {
-            id: userId1,
-            display_name: 'Current User',
-            handle: 'currentuser',
-            avatar_url: 'https://i.pravatar.cc/40?u=current'
-          },
-          {
-            id: userId2,
-            display_name: 'John Doe',
-            handle: 'johndoe',
-            avatar_url: 'https://i.pravatar.cc/40?u=john'
-          }
-        ]
-      }
-    ];
-    
-    console.log('🔍 ThreadService: Generated mock channel threads with valid UUIDs:', mockThreads);
-    return mockThreads;
-  }
-
-  /**
-   * Gerar mensagem mock para thread
-   */
-  private getMockThreadMessage(threadId: string, messageData: {
-    content: string
-    authorId: string
-    channelId?: string
-    dmId?: string
-    type?: 'text' | 'code' | 'link'
-  }): ThreadMessage {
-    console.log('🔍 ThreadService: Generating mock thread message for:', { threadId, messageData });
-    
-    // ✅ CORRIGIDO: Usar UUID válido para mensagem mock
-    const mockMessage: ThreadMessage = {
-      id: this.generateValidUUID(),
-      content: messageData.content,
-      type: messageData.type || 'text',
-      author_id: messageData.authorId,
-      channel_id: messageData.channelId,
-      thread_id: threadId,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      author: {
-        id: messageData.authorId,
-        display_name: 'Current User',
-        handle: 'currentuser',
-        avatar_url: 'https://i.pravatar.cc/40?u=current'
-      }
-    };
-    
-    // ✅ ADICIONAR AO CACHE DE MENSAGENS DA THREAD
-    this.addMessageToThreadCache(threadId, mockMessage);
-    
-    console.log('🔍 ThreadService: Generated and cached mock thread message:', mockMessage);
-    return mockMessage;
-  }
 
   /**
    * Adicionar mensagem ao cache de uma thread
    */
   private addMessageToThreadCache(threadId: string, message: ThreadMessage): void {
-    console.log('🔍 ThreadService: Adding message to thread cache:', { threadId, messageId: message.id });
     
     // ✅ Obter mensagens existentes ou criar array vazio
     const existingMessages = this.mockThreadMessagesCache.get(threadId) || [];
@@ -785,7 +449,51 @@ export class ThreadService {
     // ✅ Salvar no cache
     this.mockThreadMessagesCache.set(threadId, updatedMessages);
     
-    console.log('🔍 ThreadService: Thread cache updated. Total messages:', updatedMessages.length);
+  }
+
+  /**
+   * Criar ou obter um DM especial para mensagens de thread
+   */
+  private async getOrCreateThreadDM(): Promise<string> {
+    const THREAD_DM_ID = '00000000-0000-0000-0000-000000000001'
+    
+    try {
+      // ✅ VERIFICAR: Se o DM especial já existe
+      const { data: existingDM, error: checkError } = await this.supabase
+        .from('direct_messages')
+        .select('id')
+        .eq('id', THREAD_DM_ID)
+        .single()
+      
+      if (existingDM) {
+        console.log('ThreadService: Thread DM already exists:', THREAD_DM_ID)
+        return THREAD_DM_ID
+      }
+      
+      // ✅ CRIAR: DM especial para threads se não existir
+      const { data: newDM, error: createError } = await this.supabase
+        .from('direct_messages')
+        .insert({
+          id: THREAD_DM_ID,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single()
+      
+      if (createError) {
+        console.error('ThreadService: Error creating thread DM:', createError)
+        throw createError
+      }
+      
+      console.log('ThreadService: Created thread DM:', newDM.id)
+      return newDM.id
+      
+    } catch (error) {
+      console.error('ThreadService: Error in getOrCreateThreadDM:', error)
+      // ✅ FALLBACK: Retornar um ID válido se der erro
+      return THREAD_DM_ID
+    }
   }
 }
 

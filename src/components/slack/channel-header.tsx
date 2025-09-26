@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useState } from 'react';
-import { Hash, User as UserIcon, Info, Search, Phone, Star } from 'lucide-react';
+import { Hash, User as UserIcon, Info, Search, Star } from 'lucide-react';
 import { Channel, User } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from './user-avatar';
@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import ChannelDetailsPane from './channel-details-pane';
 import UserDetailsPane from './user-details-pane';
 import { SearchDialog } from './search-dialog';
-import { users as allUsers } from '@/lib/data';
+import { useWorkspaceUsers } from '@/hooks/use-workspace-users';
 
 interface ChannelHeaderProps {
   conversation: Channel | User | undefined;
@@ -19,6 +19,12 @@ interface ChannelHeaderProps {
 
 export default function ChannelHeader({ conversation, workspaceId }: ChannelHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { users: allUsers } = useWorkspaceUsers(workspaceId || '');
+
+  // ✅ DEBUG: Log dos dados recebidos
+  console.log('🔍 ChannelHeader: conversation data:', conversation);
+  console.log('🔍 ChannelHeader: conversation type:', typeof conversation);
+  console.log('🔍 ChannelHeader: conversation keys:', conversation ? Object.keys(conversation) : 'null');
 
   const handleInfoClick = useCallback(() => {
     // TODO: Implement info panel functionality
@@ -47,13 +53,15 @@ export default function ChannelHeader({ conversation, workspaceId }: ChannelHead
           )}
           <div className="flex flex-col">
             <h2 className="text-lg font-bold">{isChannel ? conversation.name : conversation.displayName}</h2>
-            {isChannel && conversation.description && (
-              <p className="text-xs text-muted-foreground">{conversation.description}</p>
+            {isChannel && (
+              <p className="text-xs text-muted-foreground">
+                {conversation.description || `Canal ${conversation.name}`}
+              </p>
             )}
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isChannel && (
+          {isChannel && allUsers && allUsers.length > 0 && (
             <div className="flex -space-x-2 overflow-hidden">
               {allUsers.slice(0, 2).map(user => (
                 <UserAvatar key={user.id} user={user} className="h-7 w-7 border-2 border-background" />
@@ -65,9 +73,6 @@ export default function ChannelHeader({ conversation, workspaceId }: ChannelHead
               }
             </div>
           )}
-          <Button variant="ghost" size="icon" aria-label="Start a call">
-            <Phone className="h-5 w-5" />
-          </Button>
           <Separator orientation="vertical" className="h-6" />
           {isChannel && (
             <Button 

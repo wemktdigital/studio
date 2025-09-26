@@ -139,7 +139,7 @@ export function useDirectMessages(workspaceId: string) {
   }
 }
 
-export function useDMMessages(dmId: string) {
+export function useDMMessages(dmId: string, workspaceId?: string) {
   console.log('🔍 useDMMessages: Hook called with dmId:', dmId)
   
   const { user } = useAuthContext()
@@ -168,7 +168,7 @@ export function useDMMessages(dmId: string) {
       try {
         // ✅ USAR MESSAGE SERVICE COMO OS CANAIS
         const { messageService } = await import('@/lib/services/message-service')
-        const result = await messageService.getDirectMessageMessages(dmId)
+        const result = await messageService.getDirectMessageMessages(dmId, user?.id, workspaceId)
         console.log('🔍 useDMMessages: messageService returned:', result)
         console.log('🔍 useDMMessages: Result type:', typeof result)
         console.log('🔍 useDMMessages: Result is array:', Array.isArray(result))

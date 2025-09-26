@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useChannelMessages } from '@/hooks/use-messages'
 import { useAuthContext } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
@@ -17,15 +17,21 @@ interface FunctionalChatProps {
   channelId: string
   channelName: string
   workspaceId: string
+  channel?: {
+    id: string
+    name: string
+    description?: string
+    isPrivate?: boolean
+    workspaceId?: string
+  }
 }
 
-export default function FunctionalChat({ channelId, channelName, workspaceId }: FunctionalChatProps) {
-  console.log('🔍 FunctionalChat: Props:', { channelId, channelName, workspaceId });
+export default function FunctionalChat({ channelId, channelName, workspaceId, channel }: FunctionalChatProps) {
+  console.log('🔍 FunctionalChat: Props:', { channelId, channelName, workspaceId, channel });
   
   const { user } = useAuthContext()
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   
-  const { messages, users, isLoading, error } = useChannelMessages(channelId)
+  const { messages, users, isLoading, error } = useChannelMessages(channelId, workspaceId)
 
   console.log('🔍 FunctionalChat: useChannelMessages result:', { 
     messages: messages?.length || 0, 
@@ -33,11 +39,6 @@ export default function FunctionalChat({ channelId, channelName, workspaceId }: 
     isLoading, 
     error 
   });
-
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
 
   if (isLoading) {
     console.log('🔍 FunctionalChat: Loading state');
@@ -62,8 +63,8 @@ export default function FunctionalChat({ channelId, channelName, workspaceId }: 
     )
   }
 
-  // Create a mock channel object for the header
-  const mockChannel = {
+  // ✅ CORRIGIDO: Usar dados reais do canal se disponíveis
+  const channelData = channel || {
     id: channelId,
     workspaceId: workspaceId,
     name: channelName,
@@ -73,13 +74,17 @@ export default function FunctionalChat({ channelId, channelName, workspaceId }: 
     members: []
   }
 
-  console.log('🔍 FunctionalChat: Rendering with mockChannel:', mockChannel);
+  // ✅ DEBUG: Log dos dados do canal
+  console.log('🔍 FunctionalChat: channel prop:', channel);
+  console.log('🔍 FunctionalChat: channelData:', channelData);
+  console.log('🔍 FunctionalChat: channelData.name:', channelData.name);
+  console.log('🔍 FunctionalChat: channelData.description:', channelData.description);
 
   return (
     <div className="flex-1 flex flex-col h-full">
       {/* Channel Header with Search Button */}
       <ChannelHeader 
-        conversation={mockChannel} 
+        conversation={channelData} 
         workspaceId={workspaceId}
       />
 
@@ -88,19 +93,17 @@ export default function FunctionalChat({ channelId, channelName, workspaceId }: 
         <MessageList 
           messages={messages} 
           users={users} 
-          conversation={mockChannel}
+          conversation={channelData}
           workspaceId={workspaceId}
         />
       </div>
 
       {/* ✅ ATUALIZADO: Usar MessageComposer integrado */}
       <MessageComposer 
-        conversation={mockChannel}
+        conversation={channelData}
         channelId={channelId}
         workspaceId={workspaceId}
       />
-      
-      <div ref={messagesEndRef} />
     </div>
   )
 }

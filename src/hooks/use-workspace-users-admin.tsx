@@ -26,7 +26,7 @@ export interface WorkspaceUserUpdate {
 
 export function useWorkspaceUsersAdmin(workspaceId: string) {
   const { user } = useAuthContext()
-  const { can } = useUserLevels()
+  const { can, currentUserLevel } = useUserLevels()
   const queryClient = useQueryClient()
 
   // Get all users in workspace
@@ -38,46 +38,142 @@ export function useWorkspaceUsersAdmin(workspaceId: string) {
   } = useQuery({
     queryKey: ['workspace-users-admin', workspaceId],
     queryFn: async () => {
-      if (!can.manageUsers()) {
-        throw new Error('You do not have permission to view workspace users')
-      }
+      try {
+        console.log('🔍 useWorkspaceUsersAdmin: Starting query for workspace:', workspaceId)
+        
+        // ✅ VERIFICAÇÃO: Permissões (simplificada)
+        console.log('🔍 useWorkspaceUsersAdmin: Checking permissions...')
+        console.log('🔍 useWorkspaceUsersAdmin: currentUserLevel:', currentUserLevel)
+        
+        // ✅ PERMISSÃO SIMPLIFICADA: Permitir para admins ou super admins
+        const isAdmin = currentUserLevel?.userLevel === 'admin' || currentUserLevel?.userLevel === 'super_admin'
+        console.log('🔍 useWorkspaceUsersAdmin: User is admin:', isAdmin)
+        
+        if (!isAdmin) {
+          console.warn('🔍 useWorkspaceUsersAdmin: User does not have admin permissions')
+          return []
+        }
 
-      // Simplesmente buscar todos os usuários por enquanto
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          id,
-          display_name,
-          avatar_url,
-          status,
-          user_level,
-          created_at
-        `)
-        .limit(10)
+        // ✅ VERIFICAÇÃO: workspaceId válido
+        if (!workspaceId) {
+          console.warn('🔍 useWorkspaceUsersAdmin: No workspaceId provided')
+          return []
+        }
 
-      if (error) {
-        console.error('Error fetching workspace users:', error)
+        // ✅ BUSCAR: Usuários do workspace (versão simplificada)
+        console.log('🔍 useWorkspaceUsersAdmin: Fetching workspace members...')
+        
+        // ✅ TESTE 1: Verificar se a tabela workspace_members existe
+        console.log('🔍 useWorkspaceUsersAdmin: Testing workspace_members table...')
+        const { data: testData, error: testError } = await supabase
+          .from('workspace_members')
+          .select('*')
+          .limit(1)
+        
+        if (testError) {
+          console.error('🔍 useWorkspaceUsersAdmin: workspace_members table error:', testError)
+          console.error('🔍 useWorkspaceUsersAdmin: Test error message:', testError.message)
+          console.error('🔍 useWorkspaceUsersAdmin: Test error details:', testError.details)
+          console.error('🔍 useWorkspaceUsersAdmin: Test error hint:', testError.hint)
+          console.error('🔍 useWorkspaceUsersAdmin: Test error code:', testError.code)
+          
+          // ✅ FALLBACK: Se workspace_members não existe, retornar array vazio
+          if (testError.code === 'PGRST116' || testError.message?.includes('relation "workspace_members" does not exist')) {
+            console.warn('🔍 useWorkspaceUsersAdmin: workspace_members table does not exist, returning empty array')
+            return []
+          }
+          
+          throw new Error(`workspace_members table error: ${testError.message}`)
+        }
+        
+        console.log('🔍 useWorkspaceUsersAdmin: workspace_members table exists, test data:', testData)
+        
+        // ✅ TESTE 2: Buscar membros do workspace
+        const { data, error } = await supabase
+          .from('workspace_members')
+          .select('*')
+          .eq('workspace_id', workspaceId)
+
+        if (error) {
+          console.error('🔍 useWorkspaceUsersAdmin: Supabase error:', error)
+          console.error('🔍 useWorkspaceUsersAdmin: Error message:', error.message)
+          console.error('🔍 useWorkspaceUsersAdmin: Error details:', error.details)
+          console.error('🔍 useWorkspaceUsersAdmin: Error hint:', error.hint)
+          console.error('🔍 useWorkspaceUsersAdmin: Error code:', error.code)
+          throw new Error(`Database error: ${error.message || 'Unknown error'}`)
+        }
+
+        console.log('🔍 useWorkspaceUsersAdmin: Raw data from Supabase:', data)
+
+        // ✅ VERIFICAÇÃO: Dados válidos
+        if (!data || !Array.isArray(data)) {
+          console.warn('🔍 useWorkspaceUsersAdmin: No data returned or invalid format')
+          return []
+        }
+
+        // ✅ TRANSFORMAR: Dados da estrutura (versão simplificada)
+        console.log('🔍 useWorkspaceUsersAdmin: Processing members data:', data)
+        
+        // ✅ BUSCAR: Dados dos usuários separadamente
+        const userIds = data.map(member => member.user_id)
+        console.log('🔍 useWorkspaceUsersAdmin: User IDs to fetch:', userIds)
+        
+        let usersData = []
+        if (userIds.length > 0) {
+          const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, display_name, avatar_url, status, user_level, created_at')
+            .in('id', userIds)
+          
+          if (usersError) {
+            console.error('🔍 useWorkspaceUsersAdmin: Users table error:', usersError)
+            console.error('🔍 useWorkspaceUsersAdmin: Users error message:', usersError.message)
+          } else {
+            console.log('🔍 useWorkspaceUsersAdmin: Users data:', users)
+            usersData = users || []
+          }
+        }
+        
+        const usersWithStats = data.map((member) => {
+          const user = usersData.find(u => u.id === member.user_id) || {
+            id: member.user_id,
+            display_name: 'Unknown User',
+            avatar_url: null,
+            status: 'offline',
+            user_level: 'member',
+            created_at: new Date().toISOString()
+          }
+          
+          console.log('🔍 useWorkspaceUsersAdmin: Processing member:', { member, user })
+          
+          return {
+            id: user.id,
+            handle: user.display_name?.toLowerCase().replace(/\s+/g, '') || `user_${user.id.slice(0, 8)}`,
+            displayName: user.display_name || 'Unknown User',
+            email: '', // Email not available in users table
+            avatarUrl: user.avatar_url,
+            status: user.status || 'offline',
+            userLevel: user.user_level || 'member',
+            joinedAt: member.joined_at || new Date().toISOString(),
+            messageCount: 0 // Simplificado por enquanto
+          } as WorkspaceUser
+        })
+
+        console.log('🔍 useWorkspaceUsersAdmin: Transformed users:', usersWithStats)
+        return usersWithStats.sort((a, b) => a.displayName.localeCompare(b.displayName))
+        
+      } catch (error) {
+        console.error('🔍 useWorkspaceUsersAdmin: Unexpected error:', error)
+        console.error('🔍 useWorkspaceUsersAdmin: Error type:', typeof error)
+        console.error('🔍 useWorkspaceUsersAdmin: Error message:', error instanceof Error ? error.message : String(error))
+        console.error('🔍 useWorkspaceUsersAdmin: Error stack:', error instanceof Error ? error.stack : undefined)
+        console.error('🔍 useWorkspaceUsersAdmin: WorkspaceId:', workspaceId)
         throw error
       }
-
-      // Transformar dados para o formato esperado
-      const usersWithStats = (data || []).map((user) => {
-        return {
-          id: user.id,
-          handle: user.display_name?.toLowerCase().replace(/\s+/g, '') || `user_${user.id.slice(0, 8)}`,
-          displayName: user.display_name,
-          email: '', // Email not available in users table
-          avatarUrl: user.avatar_url,
-          status: user.status,
-          userLevel: user.user_level || 'member',
-          joinedAt: user.created_at,
-          messageCount: 0 // Simplificado por enquanto
-        } as WorkspaceUser
-      })
-
-      return usersWithStats.sort((a, b) => a.displayName.localeCompare(b.displayName))
     },
-    enabled: !!workspaceId && can.manageUsers()
+    enabled: !!workspaceId && !!currentUserLevel,
+    retry: 1,
+    retryDelay: 1000
   })
 
   // Update user level

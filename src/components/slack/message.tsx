@@ -12,6 +12,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import UserDetailsPane from './user-details-pane';
 import { ThreadPanel } from './thread-panel';
@@ -81,25 +88,17 @@ export default function MessageItem({
 
   // ✅ MEMOIZADO: Encontrar o author pelos dados dos usuários
   const author = useMemo(() => {
-    console.log('🔍 MessageItem: Looking for author with ID:', message.authorId)
-    console.log('🔍 MessageItem: Available users:', users.map(u => ({ id: u.id, displayName: u.displayName })))
-    console.log('🔍 MessageItem: Users array length:', users.length)
-    console.log('🔍 MessageItem: Users array:', users)
-    
     const foundAuthor = users.find(u => u.id === message.authorId)
-    console.log('🔍 MessageItem: Found author:', foundAuthor)
-    
     return foundAuthor
   }, [users, message.authorId]);
   
-  // ✅ VERIFICAR: Se o author foi encontrado
-  if (!author) {
-    console.warn('🔍 MessageItem: Author not found for message:', {
-      messageId: message.id,
-      authorId: message.authorId,
-      availableUsers: users.map(u => u.id)
-    })
-    return null;
+  // ✅ VERIFICAR: Se o author foi encontrado, criar um autor padrão
+  const displayAuthor = author || {
+    id: message.authorId,
+    displayName: 'Usuário Desconhecido',
+    handle: 'unknown',
+    avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+    status: 'offline' as const
   }
 
   // ✅ MEMOIZADO: Timestamp para evitar recálculos
@@ -109,13 +108,13 @@ export default function MessageItem({
 
   // ✅ MEMOIZADO: Status do autor
   const authorStatus = useMemo(() => {
-    return getUserStatus(author.id || 'unknown');
-  }, [getUserStatus, author.id]);
+    return getUserStatus(displayAuthor.id || 'unknown');
+  }, [getUserStatus, displayAuthor.id]);
 
   // ✅ CALLBACK: Função de clique no avatar
   const handleAvatarClick = useCallback(() => {
-    console.log('Avatar clicked for user:', author.displayName);
-  }, [author.displayName]);
+    console.log('Avatar clicked for user:', displayAuthor.displayName);
+  }, [displayAuthor.displayName]);
 
   // ✅ CALLBACK: Função de clique no reply
   const handleReplyClick = useCallback(() => {
@@ -131,15 +130,16 @@ export default function MessageItem({
           id: message.id,
           content: message.content,
           author: {
-            id: author.id,
-            displayName: author.displayName || 'Unknown User',
-            avatarUrl: author.avatarUrl
+            id: displayAuthor.id,
+            displayName: displayAuthor.displayName || 'Unknown User',
+            avatarUrl: displayAuthor.avatarUrl
           },
           timestamp: timestamp ? format(timestamp, 'MMM d, h:mm a') : 'Unknown time'
         }}
         replies={[]} // TODO: Carregar replies da thread
         onSendReply={async (content, alsoSendAsDM) => {
           console.log('🔍 MessageItem: Reply sent:', { content, alsoSendAsDM });
+          console.log('🔍 MessageItem: alsoSendAsDM value:', alsoSendAsDM, 'type:', typeof alsoSendAsDM);
           
           try {
             // ✅ IMPLEMENTADO: Enviar reply usando hook useAddThreadMessage
@@ -191,40 +191,49 @@ export default function MessageItem({
             
             console.log('🔍 MessageItem: Reply sent successfully!');
             
-            // ✅ OPÇÃO: Se alsoSendAsDM for true, também enviar como DM
-            if (alsoSendAsDM) {
-              console.log('🔍 MessageItem: Also sending as DM');
+            // ✅ OPÇÃO: Se alsoSendAsChannelMessage for true, também enviar como mensagem no canal
+            console.log('🔍 MessageItem: Checking alsoSendAsChannelMessage condition:', { 
+              alsoSendAsChannelMessage: alsoSendAsDM, 
+              condition: alsoSendAsDM === true,
+              type: typeof alsoSendAsDM,
+              truthy: !!alsoSendAsDM
+            });
+            if (alsoSendAsDM === true) {
+              console.log('🔍 MessageItem: Also sending as channel message - CHECKBOX WAS CHECKED');
               
               try {
-                // ✅ IMPLEMENTADO: Enviar também como DM usando messageService
+                // ✅ IMPLEMENTADO: Enviar também como mensagem no canal usando messageService
                 const { messageService } = await import('@/lib/services/message-service')
                 
-                // ✅ CORRIGIDO: Usar o mesmo dmId que foi usado para a thread
-                // Isso garante que a mensagem DM seja enviada para a conversa atual
-                if (dmId) {
+                // ✅ CORRIGIDO: Enviar para o canal onde a thread está acontecendo
+                if (message.channelId) {
                   // ✅ FORMATO SLACK: Criar mensagem especial no formato "respondeu em uma conversa: [original] [nova]"
-                  const dmContent = `respondeu em uma conversa: ${message.content} ${content}`;
-                  await messageService.sendDirectMessage(dmId, dmContent, user.id)
-                  console.log('🔍 MessageItem: DM sent successfully to:', dmId, 'with content:', dmContent)
+                  const channelContent = `respondeu em uma conversa: ${message.content} ${content}`;
+                  await messageService.sendMessage({
+                    content: channelContent,
+                    channel_id: message.channelId,
+                    author_id: user.id,
+                    type: 'text'
+                  })
+                  console.log('🔍 MessageItem: Channel message sent successfully to:', message.channelId, 'with content:', channelContent)
                   
                   // ✅ ATUALIZAÇÃO EM TEMPO REAL: Invalidar queries para forçar refresh
-                  await queryClient.invalidateQueries({ queryKey: ['dm-messages', dmId] });
-                  await queryClient.invalidateQueries({ queryKey: ['direct-messages'] });
-                  await queryClient.invalidateQueries({ queryKey: ['dm-messages'] });
+                  await queryClient.invalidateQueries({ queryKey: ['channel-messages', message.channelId] });
                   await queryClient.invalidateQueries({ queryKey: ['messages'] });
                   
                   // ✅ FORÇAR REFETCH: Refetch das queries principais
-                  await queryClient.refetchQueries({ queryKey: ['dm-messages', dmId] });
-                  await queryClient.refetchQueries({ queryKey: ['direct-messages'] });
+                  await queryClient.refetchQueries({ queryKey: ['channel-messages', message.channelId] });
                   
                   console.log('🔍 MessageItem: Queries invalidated and refetched for real-time update')
                 } else {
-                  console.log('🔍 MessageItem: No DM ID available, skipping DM send')
+                  console.log('🔍 MessageItem: No channel ID available, skipping channel message send')
                 }
-              } catch (dmError) {
-                console.error('🔍 MessageItem: Error sending DM:', dmError)
-                // Não falhar o reply principal se o DM falhar
+              } catch (channelError) {
+                console.error('🔍 MessageItem: Error sending channel message:', channelError)
+                // Não falhar o reply principal se o envio para o canal falhar
               }
+            } else {
+              console.log('🔍 MessageItem: alsoSendAsChannelMessage is false, NOT sending to channel - CHECKBOX WAS NOT CHECKED')
             }
             
           } catch (error) {
@@ -234,7 +243,7 @@ export default function MessageItem({
       />
     );
     setOpen(true);
-  }, [message.id, message.content, message.channelId, author.id, author.displayName, author.avatarUrl, timestamp, setPanelTitle, setContent, setOpen, user?.id, addThreadMessage]);
+  }, [message.id, message.content, message.channelId, displayAuthor.id, displayAuthor.displayName, displayAuthor.avatarUrl, timestamp, setPanelTitle, setContent, setOpen, user?.id, addThreadMessage]);
 
   // ✅ OTIMIZADO: useEffect para montagem do componente
   useEffect(() => {
@@ -279,14 +288,14 @@ export default function MessageItem({
         <div className="w-8 shrink-0">
           {isFirstInGroup && (
             <button onClick={handleAvatarClick} className="rounded-full hover:opacity-80 transition-opacity">
-              <UserAvatar user={author} className="h-8 w-8" />
+              <UserAvatar user={displayAuthor} className="h-8 w-8" />
             </button>
           )}
         </div>
         <div className="flex-1 min-w-0 overflow-visible pb-4">
           {isFirstInGroup && (
             <div className="flex items-baseline gap-2 mb-1">
-              <span className="font-semibold text-sm text-foreground">{author.displayName || 'Unknown User'}</span>
+              <span className="font-semibold text-sm text-foreground">{displayAuthor.displayName || 'Unknown User'}</span>
               <Tooltip delayDuration={100}>
                 <TooltipTrigger asChild>
                   <span className="text-xs text-muted-foreground hover:text-foreground cursor-pointer">
@@ -341,22 +350,73 @@ export default function MessageItem({
               Reply
             </Button>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs hover:bg-accent/50"
-            >
-              <Smile className="h-3 w-3 mr-1" />
-              React
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs hover:bg-accent/50"
-            >
-              <MoreHorizontal className="h-3 w-3" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 px-2 text-xs hover:bg-accent/50"
+                >
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => {
+                    // Copiar mensagem para clipboard
+                    navigator.clipboard.writeText(message.content);
+                    console.log('Mensagem copiada para clipboard');
+                  }}
+                >
+                  Copiar mensagem
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    // Copiar link da mensagem
+                    const messageUrl = `${window.location.origin}${window.location.pathname}?message=${message.id}`;
+                    navigator.clipboard.writeText(messageUrl);
+                    console.log('Link da mensagem copiado');
+                  }}
+                >
+                  Copiar link
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    // Marcar como não lida (se aplicável)
+                    console.log('Marcar como não lida:', message.id);
+                  }}
+                >
+                  Marcar como não lida
+                </DropdownMenuItem>
+                {message.author_id === user?.id && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // Editar mensagem
+                        console.log('Editar mensagem:', message.id);
+                        // TODO: Implementar edição de mensagem
+                      }}
+                    >
+                      Editar mensagem
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        // Deletar mensagem
+                        if (confirm('Tem certeza que deseja deletar esta mensagem?')) {
+                          console.log('Deletar mensagem:', message.id);
+                          // TODO: Implementar deleção de mensagem
+                        }
+                      }}
+                      className="text-red-600 focus:text-red-600"
+                    >
+                      Deletar mensagem
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           
           {/* Thread indicator */}

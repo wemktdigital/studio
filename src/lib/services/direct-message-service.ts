@@ -159,10 +159,8 @@ export class DirectMessageService {
     console.log('🚀 DirectMessageService.getDirectMessageMessages: Called with dmId:', dmId)
     
     if (this.connectionTestFailed) {
-      console.log('🚀 DirectMessageService.getDirectMessageMessages: Using mock data due to connection failure')
-      const mockMessages = this.getMockDMMessages(dmId)
-      console.log('🚀 DirectMessageService.getDirectMessageMessages: Returning mock messages:', mockMessages)
-      return mockMessages
+      console.log('🚀 DirectMessageService.getDirectMessageMessages: Connection failed, returning empty array')
+      return []
     }
     
     try {
@@ -184,9 +182,8 @@ export class DirectMessageService {
       
       if (error) {
         console.error('DirectMessageService.getDirectMessageMessages: Error:', error)
-        const mockMessages = this.getMockDMMessages(dmId)
-        console.log('DirectMessageService.getDirectMessageMessages: Returning mock messages due to error')
-        return mockMessages
+        console.log('DirectMessageService.getDirectMessageMessages: Returning empty array due to error')
+        return []
       }
       
       console.log('DirectMessageService.getDirectMessageMessages: Successfully fetched:', data)
@@ -194,9 +191,8 @@ export class DirectMessageService {
       
     } catch (error) {
       console.error('DirectMessageService.getDirectMessageMessages: Caught error:', error)
-      const mockMessages = this.getMockDMMessages(dmId)
-      console.log('DirectMessageService.getDirectMessageMessages: Returning mock messages due to caught error')
-      return mockMessages
+      console.log('DirectMessageService.getDirectMessageMessages: Returning empty array due to caught error')
+      return []
     }
   }
 
@@ -254,30 +250,10 @@ export class DirectMessageService {
   private getMockDirectMessages(userId: string, workspaceId: string): DirectMessage[] {
     console.log('DirectMessageService.getMockDirectMessages: Creating mock DMs for user:', userId)
     
-    // ✅ CORRIGIDO: Usar IDs reais de usuários mock conhecidos
-    const mockDMs: DirectMessage[] = [
-      {
-        id: 'mock-dm-user1',
-        userId: '550e8400-e29b-41d4-a716-446655440001', // John Doe
-        lastMessageAt: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-        unreadCount: 2
-      },
-      {
-        id: 'mock-dm-user2',
-        userId: '550e8400-e29b-41d4-a716-446655440002', // Jane Smith
-        lastMessageAt: new Date(Date.now() - 600000).toISOString(), // 10 minutes ago
-        unreadCount: 0
-      },
-      {
-        id: 'mock-dm-user3',
-        userId: '550e8400-e29b-41d4-a716-446655440003', // Bob Johnson
-        lastMessageAt: new Date(Date.now() - 900000).toISOString(), // 15 minutes ago
-        unreadCount: 1
-      }
-    ]
-    
-    console.log('DirectMessageService.getMockDirectMessages: Created mock DMs with real user IDs:', mockDMs)
-    return mockDMs
+    // ✅ CORRIGIDO: Retornar array vazio para workspaces novos
+    // Não mostrar conversas mock em workspaces limpos
+    console.log('DirectMessageService.getMockDirectMessages: Returning empty array for clean workspace')
+    return []
   }
 
   /**
@@ -297,75 +273,6 @@ export class DirectMessageService {
     return mockDM
   }
 
-  /**
-   * Get mock DM messages for fallback
-   */
-  private getMockDMMessages(dmId: string): any[] {
-    console.log('DirectMessageService.getMockDMMessages: Creating mock messages for DM:', dmId)
-    
-    const mockMessages = [
-      {
-        id: `mock-dm-message-${dmId}-1`,
-        content: 'Olá! Como você está?',
-        type: 'text',
-        author_id: 'user-1',
-        dm_id: dmId,
-        channel_id: null,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
-        updated_at: new Date(Date.now() - 300000).toISOString(),
-        author: {
-          id: 'user-1',
-          display_name: 'João Silva',
-          handle: 'joao',
-          avatar_url: 'https://i.pravatar.cc/40?u=joao'
-        }
-      },
-      {
-        id: `mock-dm-message-${dmId}-2`,
-        content: 'Tudo bem! E você?',
-        type: 'text',
-        author_id: 'current-user',
-        dm_id: dmId,
-        channel_id: null,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 240000).toISOString(), // 4 minutes ago
-        updated_at: new Date(Date.now() - 240000).toISOString(),
-        author: {
-          id: 'current-user',
-          display_name: 'Edson',
-          handle: 'edson',
-          avatar_url: 'https://i.pravatar.cc/40?u=edson'
-        }
-      },
-      {
-        id: `mock-dm-message-${dmId}-3`,
-        content: 'Ótimo! Estou trabalhando no projeto novo.',
-        type: 'text',
-        author_id: 'user-1',
-        dm_id: dmId,
-        channel_id: null,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 180000).toISOString(), // 3 minutes ago
-        updated_at: new Date(Date.now() - 180000).toISOString(),
-        author: {
-          id: 'user-1',
-          display_name: 'João Silva',
-          handle: 'joao',
-          avatar_url: 'https://i.pravatar.cc/40?u=joao'
-        }
-      }
-    ]
-    
-    console.log('DirectMessageService.getMockDMMessages: Created mock messages:', mockMessages)
-    return mockMessages
-  }
 
   /**
    * Get mock DM message for fallback

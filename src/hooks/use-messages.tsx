@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast'
 import { useEffect, useRef } from 'react'
 import { useMentions } from './use-mentions'
 
-export function useChannelMessages(channelId: string) {
+export function useChannelMessages(channelId: string, workspaceId?: string) {
   const queryClient = useQueryClient()
   const { user } = useAuthContext()
   const { processNewMention } = useMentions()
@@ -15,12 +15,13 @@ export function useChannelMessages(channelId: string) {
   // Debug log - VERY VISIBLE
   console.log('🚨🚨🚨 useChannelMessages: HOOK CALLED! 🚨🚨🚨', { 
     channelId, 
+    workspaceId,
     timestamp: new Date().toISOString() 
   });
 
   const query = useQuery({
-    queryKey: ['channel-messages', channelId],
-    queryFn: () => messageService.getChannelMessages(channelId),
+    queryKey: ['channel-messages', channelId, workspaceId],
+    queryFn: () => messageService.getChannelMessages(channelId, workspaceId),
     enabled: !!channelId && channelId !== 'test-channel', // ✅ IGNORAR: channelId de teste
     staleTime: 0, // Always fresh
     retry: 1, // Tentar apenas uma vez
@@ -66,7 +67,7 @@ export function useChannelMessages(channelId: string) {
       });
       
       // Update cache
-      queryClient.setQueryData(['channel-messages', channelId], (oldData: any) => {
+      queryClient.setQueryData(['channel-messages', channelId, workspaceId], (oldData: any) => {
         if (!oldData) return [newMessage]
         
         // Check if message already exists
@@ -126,7 +127,7 @@ export function useChannelMessages(channelId: string) {
       
       // ✅ ATUALIZAR CACHE IMEDIATAMENTE: Adicionar mensagem ao cache local
       queryClient.setQueryData(
-        ['channel-messages', channelId],
+        ['channel-messages', channelId, workspaceId],
         (oldData: any) => {
           if (!oldData) {
             console.log('🔔 useChannelMessages: No old data, creating new array with message')
@@ -153,7 +154,7 @@ export function useChannelMessages(channelId: string) {
       )
       
       // ✅ COMENTADO: Não invalidar query para manter cache local
-      // queryClient.invalidateQueries({ queryKey: ['channel-messages', channelId] })
+      // queryClient.invalidateQueries({ queryKey: ['channel-messages', channelId, workspaceId] })
     },
     onError: (error) => {
       console.error('🔔 useChannelMessages: Error sending message:', error)

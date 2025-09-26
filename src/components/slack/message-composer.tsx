@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Paperclip, Mic, Send, AtSign, Smile } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Channel, User } from '@/lib/types';
@@ -27,7 +27,7 @@ export default function MessageComposer({ conversation, channelId, workspaceId }
   const [suggestionQuery, setSuggestionQuery] = useState({ prefix: '', query: '' });
   
   // ✅ ADICIONADO: Integração com hooks de mensagens
-  const { sendMessage, isSending } = useChannelMessages(channelId || '')
+  const { sendMessage, isSending } = useChannelMessages(channelId || '', workspaceId)
   const { user } = useAuthContext()
   
   // Mention system state
@@ -201,12 +201,6 @@ export default function MessageComposer({ conversation, channelId, workspaceId }
         </div>
         
         <div className="flex gap-2">
-          <Button type="button" variant="ghost" size="sm" disabled={isSending}>
-            <Paperclip className="h-4 w-4" />
-          </Button>
-          <Button type="button" variant="ghost" size="sm" disabled={isSending}>
-            <Mic className="h-4 w-4" />
-          </Button>
           <Button type="submit" size="sm" disabled={!text.trim() || isSending}>
             <Send className="h-4 w-4" />
           </Button>

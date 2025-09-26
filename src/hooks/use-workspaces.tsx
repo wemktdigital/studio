@@ -75,23 +75,8 @@ export function useWorkspaces() {
         return await workspaceService.getUserWorkspaces()
       } catch (error) {
         console.error('Error in useWorkspaces queryFn:', error)
-        // ✅ FALLBACK: Retornar workspaces mock se houver erro
-        return [
-          {
-            id: 'mock-workspace-1',
-            name: 'WE Marketing',
-            logo_url: 'https://i.pravatar.cc/40?u=we',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: 'mock-workspace-2',
-            name: 'Studio Dev',
-            logo_url: 'https://i.pravatar.cc/40?u=studio',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ]
+        // ✅ FALLBACK: Retornar array vazio se houver erro
+        return []
       }
     },
     enabled: !!user,

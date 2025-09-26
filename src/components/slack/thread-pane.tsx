@@ -48,17 +48,11 @@ export default function ThreadPane({ originalMessage, author, workspaceId }: Thr
     
     const handleSendReply = async () => {
         if (!replyContent.trim() || !user) return;
-        console.log('🔍 ThreadPane: Starting to send reply...', {
-            replyContent: replyContent.trim(),
-            user: user?.id,
-            messageId: originalMessage.id,
-            workspaceId: workspaceId
-        });
+        
         setIsSubmitting(true);
         try {
             // Create thread if it doesn't exist
             if (!currentThreadId && !createThreadMutation.isPending && workspaceId) {
-                console.log('🔍 ThreadPane: Creating thread for message:', originalMessage.id);
                 const newThread = await createThreadMutation.mutateAsync({
                     originalMessageId: originalMessage.id,
                     channelId: originalMessage.channelId || '',
@@ -70,7 +64,6 @@ export default function ThreadPane({ originalMessage, author, workspaceId }: Thr
 
             // Add reply to thread
             if (currentThreadId) {
-                console.log('🔍 ThreadPane: Adding reply to thread:', replyContent);
                 
                 // ✅ CORRIGIDO: Garantir que sempre temos um dmId válido para DMs
                 let dmId = originalMessage.dmId
@@ -79,11 +72,9 @@ export default function ThreadPane({ originalMessage, author, workspaceId }: Thr
                     const currentDmId = window.location.search.match(/dm=([^&]+)/)?.[1]
                     if (currentDmId) {
                         dmId = currentDmId
-                        console.log('🔍 ThreadPane: Generated DM ID from URL:', dmId)
                     } else {
                         // ✅ FALLBACK: Usar um ID mock válido para evitar constraint violation
                         dmId = '00000000-0000-0000-0000-000000000000'
-                        console.log('🔍 ThreadPane: No DM ID in URL, using fallback UUID:', dmId)
                     }
                 }
                 
@@ -99,7 +90,6 @@ export default function ThreadPane({ originalMessage, author, workspaceId }: Thr
                 });
             }
 
-            console.log('🔍 ThreadPane: Reply sent successfully');
             setReplyContent('');
         } catch (error: any) {
             console.error('🔍 ThreadPane: Error sending reply:', error);
@@ -109,7 +99,6 @@ export default function ThreadPane({ originalMessage, author, workspaceId }: Thr
                 name: error?.name || 'Unknown error type'
             });
         } finally {
-            console.log('🔍 ThreadPane: Setting isSubmitting to false');
             setIsSubmitting(false);
         }
     };

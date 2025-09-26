@@ -23,8 +23,6 @@ type ThreadMessage = Database['public']['Tables']['thread_messages']['Row']
 
 export class MessageService {
   private supabase = createClient()
-  private mockMessageCache = new Map<string, Message[]>()
-  private mockUserCache = new Map<string, any>()
   private useFallbackMode = false // ✅ FALLBACK: Usar Supabase real para produção
   private errorCount = 0 // ✅ CONTADOR: Para detectar problemas persistentes
   private readonly MAX_ERRORS = 3 // ✅ LIMITE: Máximo de erros antes de forçar fallback
@@ -53,6 +51,20 @@ export class MessageService {
   private async testSupabaseConnection() {
     try {
       console.log('MessageService: Testing Supabase connection...')
+      
+      // ✅ VERIFICAÇÃO: Se está rodando em SSR, pular o teste
+      if (typeof window === 'undefined') {
+        console.log('MessageService: SSR detected, skipping connection test')
+        this.useFallbackMode = false
+        return
+      }
+      
+      // ✅ VERIFICAÇÃO: Se o cliente Supabase é null
+      if (!this.supabase) {
+        console.warn('MessageService: Supabase client is null, using fallback mode')
+        this.useFallbackMode = true
+        return
+      }
       
       // Teste simples: tentar buscar uma mensagem
       const { data, error } = await this.supabase
@@ -89,20 +101,14 @@ export class MessageService {
   /**
    * Get messages for a direct message conversation
    */
-  async getDirectMessageMessages(dmId: string, currentUserId?: string): Promise<Message[]> {
+  async getDirectMessageMessages(dmId: string, currentUserId?: string, workspaceId?: string): Promise<Message[]> {
     console.log('MessageService: Fetching DM messages for:', dmId)
     
     try {
       // ✅ VALIDAÇÃO: Verificar se dmId é válido
       if (!dmId) {
-        console.log('MessageService: Invalid dmId, using mock data')
-        return this.getMockDMMessages(dmId)
-      }
-      
-      // ✅ FALLBACK CHECK: Se estiver em modo fallback, usar mock data imediatamente
-      if (this.useFallbackMode) {
-        console.log('MessageService: Using fallback mode for DMs, skipping Supabase query')
-        return this.getMockDMMessages(dmId)
+        console.log('MessageService: Invalid dmId')
+        return []
       }
       
       // ✅ IMPLEMENTAÇÃO REAL: Tentar buscar do Supabase primeiro
@@ -133,14 +139,16 @@ export class MessageService {
           dmId
         })
         this.incrementErrorCount()
-        console.log('MessageService: Using mock data due to error')
-        return this.getMockDMMessages(dmId)
+        console.log('MessageService: Error fetching DM messages, returning empty array')
+        return []
       }
 
       if (!allMessages || allMessages.length === 0) {
         console.log('MessageService: No messages found for DM:', realDmId)
         return []
       }
+
+      console.log('MessageService: Found', allMessages.length, 'DM messages')
 
       // ✅ CORRIGIDO: Buscar IDs das mensagens que estão em threads
       const messageIds = allMessages.map(msg => msg.id)
@@ -158,6 +166,14 @@ export class MessageService {
         // ✅ CORRIGIDO: Filtrar mensagens que NÃO estão em threads
         const threadMessageIdSet = new Set(threadMessageIds?.map(tm => tm.message_id) || [])
         data = allMessages.filter(msg => !threadMessageIdSet.has(msg.id))
+        
+        // ✅ FILTRAR ADICIONAL: Excluir mensagens com ID especial de thread
+        const beforeSpecialFilter = data.length
+        data = data.filter(msg => 
+          msg.dm_id !== '00000000-0000-0000-0000-000000000001'
+        )
+        console.log('MessageService: Filtered out', beforeSpecialFilter - data.length, 'special thread messages from DM')
+        
         error = null
       }
 
@@ -171,9 +187,9 @@ export class MessageService {
         })
         // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
         this.incrementErrorCount()
-        // ✅ FALLBACK: Retornar mock data em caso de erro
-        console.log('MessageService: Using mock data due to error')
-        return this.getMockDMMessages(dmId)
+        // ✅ FALLBACK: Retornar array vazio em caso de erro
+        console.log('MessageService: Error fetching DM messages, returning empty array')
+        return []
       }
 
       if (data && data.length > 0) {
@@ -183,9 +199,8 @@ export class MessageService {
         // ✅ RESETAR CONTADOR: Operação bem-sucedida
         this.errorCount = 0
         
-        // ✅ COMBINAR: Adicionar mensagens do cache mock se houver
-        const cachedMessages = this.getMessagesFromCache(dmId)
-        const allMessages = [...data, ...cachedMessages]
+        // ✅ COMBINAR: Usar apenas dados do Supabase
+        const allMessages = [...data]
         
         // ✅ REMOVER DUPLICATAS: Baseado no ID da mensagem
         const uniqueMessages = allMessages.filter((message, index, self) => 
@@ -211,21 +226,14 @@ export class MessageService {
           reactions: [] // Inicializar array vazio
         }))
         
-        console.log('MessageService: Returning combined DM messages - Base:', data.length, 'Cached:', cachedMessages.length, 'Unique:', uniqueMessages.length, 'Transformed:', transformedMessages.length)
+        console.log('MessageService: Returning DM messages - Base:', data.length, 'Unique:', uniqueMessages.length, 'Transformed:', transformedMessages.length)
         console.log('MessageService: Transformed messages:', transformedMessages)
         return transformedMessages
       }
 
-      // ✅ SE VAZIO: Verificar se há mensagens no cache antes de usar mock
+      // ✅ SE VAZIO: Retornar array vazio
       console.log('MessageService: No real DM messages found in Supabase')
-      const cachedMessages = this.getMessagesFromCache(dmId)
-      if (cachedMessages && cachedMessages.length > 0) {
-        console.log('MessageService: Found', cachedMessages.length, 'cached messages, returning them')
-        return cachedMessages
-      }
-      
-      console.log('MessageService: No cached messages either, using mock data')
-      return this.getMockDMMessages(dmId)
+      return []
       
     } catch (error) {
       console.error('Error in Supabase DM query:', {
@@ -235,8 +243,8 @@ export class MessageService {
       })
       // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
       this.incrementErrorCount()
-      console.log('MessageService: Using mock data due to caught error')
-      return this.getMockDMMessages(dmId)
+      console.log('MessageService: Caught error, returning empty array')
+      return []
     }
   }
 
@@ -257,9 +265,8 @@ export class MessageService {
         console.log('MessageService: Using fallback mode for DM send, skipping Supabase insert')
         const mockMessage = this.getMockDMMessage(dmId, content, authorId)
         
-        // ✅ CACHE: Adicionar mensagem ao cache local
-        this.addMessageToCache(dmId, mockMessage)
-        console.log('MessageService: DM message added to cache')
+        // ✅ CACHE: Cache removido
+        console.log('MessageService: DM message created')
         
         return mockMessage
       }
@@ -323,9 +330,8 @@ export class MessageService {
         console.log('MessageService: Using mock data due to Supabase error')
         const mockMessage = this.getMockDMMessage(dmId, content, authorId)
         
-        // ✅ CACHE: Adicionar mensagem ao cache local
-        this.addMessageToCache(dmId, mockMessage)
-        console.log('MessageService: DM message added to cache')
+        // ✅ CACHE: Cache removido
+        console.log('MessageService: DM message created')
         
         return mockMessage
       }
@@ -355,9 +361,8 @@ export class MessageService {
         
         console.log('MessageService: Transformed DM message:', transformedMessage)
         
-        // ✅ CACHE: Adicionar mensagem ao cache local
-        this.addMessageToCache(dmId, transformedMessage)
-        console.log('MessageService: DM message added to cache')
+        // ✅ CACHE: Cache removido
+        console.log('MessageService: DM message created')
         
         return transformedMessage
       }
@@ -366,9 +371,8 @@ export class MessageService {
       console.log('MessageService: No data returned from Supabase for DM, using mock data')
       const mockMessage = this.getMockDMMessage(dmId, content, authorId)
       
-      // ✅ CACHE: Adicionar mensagem ao cache local
-      this.addMessageToCache(dmId, mockMessage)
-      console.log('MessageService: DM message added to cache')
+      // ✅ CACHE: Cache removido
+      console.log('MessageService: DM message created')
       
       return mockMessage
       
@@ -379,9 +383,8 @@ export class MessageService {
       // ✅ FALLBACK: Usar mock data em caso de erro
       const mockMessage = this.getMockDMMessage(dmId, content, authorId)
       
-      // ✅ CACHE: Adicionar mensagem ao cache local
-      this.addMessageToCache(dmId, mockMessage)
-      console.log('MessageService: DM message added to cache')
+      // ✅ CACHE: Cache removido
+      console.log('MessageService: DM message created')
       
       return mockMessage
     }
@@ -390,7 +393,7 @@ export class MessageService {
   /**
    * Get messages for a channel
    */
-  async getChannelMessages(channelId: string): Promise<Message[]> {
+  async getChannelMessages(channelId: string, workspaceId?: string): Promise<Message[]> {
     try {
       console.log('MessageService: Fetching real messages for channel:', channelId)
       
@@ -400,14 +403,8 @@ export class MessageService {
       console.log('MessageService: isMockChannelId:', this.isMockChannelId(channelId))
       
       if (!this.isValidUUID(channelId) && !this.isMockChannelId(channelId)) {
-        console.log('MessageService: Invalid channelId, using mock data:', channelId)
-        return this.getMockMessages(channelId)
-      }
-      
-      // ✅ FALLBACK CHECK: Se estiver em modo fallback, usar mock data imediatamente
-      if (this.useFallbackMode) {
-        console.log('MessageService: Using fallback mode, skipping Supabase query')
-        return this.getMockMessages(channelId)
+        console.log('MessageService: Invalid channelId, returning empty array:', channelId)
+        return []
       }
       
       // ✅ IMPLEMENTAÇÃO REAL: Tentar buscar do Supabase primeiro para todos os canais
@@ -425,7 +422,14 @@ export class MessageService {
         
         const { data, error } = await this.supabase
           .from('messages')
-          .select('*')
+          .select(`
+            *,
+            channel:channels!messages_channel_id_fkey(
+              id,
+              name,
+              workspace_id
+            )
+          `)
           .eq('channel_id', realChannelId)
           .order('created_at', { ascending: true })
           .limit(100) // Limitar a 100 mensagens para performance
@@ -448,12 +452,41 @@ export class MessageService {
         if (data && data.length > 0) {
           console.log('MessageService: Successfully fetched', data.length, 'real messages from Supabase')
           
+          // ✅ FILTRAR: Garantir que as mensagens são do workspace correto
+          const workspaceFilteredMessages = workspaceId 
+            ? data.filter(msg => msg.channel?.workspace_id === workspaceId)
+            : data
+
+          console.log('MessageService: Filtered to', workspaceFilteredMessages.length, 'messages for workspace:', workspaceId)
+          
+          // ✅ FILTRAR: Excluir mensagens que estão em threads
+          const messageIds = workspaceFilteredMessages.map(msg => msg.id)
+          const { data: threadMessageIds, error: threadError } = await this.supabase
+            .from('thread_messages')
+            .select('message_id')
+            .in('message_id', messageIds)
+
+          let filteredMessages = workspaceFilteredMessages
+          if (!threadError && threadMessageIds) {
+            const threadMessageIdSet = new Set(threadMessageIds.map(tm => tm.message_id))
+            filteredMessages = workspaceFilteredMessages.filter(msg => !threadMessageIdSet.has(msg.id))
+            console.log('MessageService: Filtered out', workspaceFilteredMessages.length - filteredMessages.length, 'thread messages')
+          } else if (threadError) {
+            console.warn('MessageService: Error filtering thread messages, showing all messages:', threadError)
+          }
+          
+          // ✅ FILTRAR ADICIONAL: Excluir mensagens com ID especial de thread
+          const beforeSpecialFilter = filteredMessages.length
+          filteredMessages = filteredMessages.filter(msg => 
+            msg.dm_id !== '00000000-0000-0000-0000-000000000001'
+          )
+          console.log('MessageService: Filtered out', beforeSpecialFilter - filteredMessages.length, 'special thread messages from channel')
+          
           // ✅ RESETAR CONTADOR: Operação bem-sucedida
           this.errorCount = 0
           
-          // ✅ COMBINAR: Adicionar mensagens do cache mock se houver
-          const cachedMessages = this.getMessagesFromCache(channelId)
-          const allMessages = [...data, ...cachedMessages]
+          // ✅ COMBINAR: Usar apenas dados do Supabase
+          const allMessages = [...filteredMessages]
           
           // ✅ REMOVER DUPLICATAS: Baseado no ID da mensagem
           const uniqueMessages = allMessages.filter((message, index, self) => 
@@ -463,13 +496,13 @@ export class MessageService {
           // ✅ ORDENAR: Por timestamp de criação
           uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
           
-          console.log('MessageService: Returning combined messages - Base:', data.length, 'Cached:', cachedMessages.length, 'Unique:', uniqueMessages.length)
+          console.log('MessageService: Returning messages - Base:', filteredMessages.length, 'Unique:', uniqueMessages.length)
           return uniqueMessages
         }
 
-        // ✅ SE VAZIO: Retornar apenas mensagens mock se não houver mensagens reais
-        console.log('MessageService: No real messages found, using mock data')
-        return this.getMockMessages(channelId)
+        // ✅ SE VAZIO: Retornar array vazio se não houver mensagens reais
+        console.log('MessageService: No real messages found, returning empty array')
+        return []
         
       } catch (error) {
         console.error('Error in Supabase query:', {
@@ -493,60 +526,6 @@ export class MessageService {
     }
   }
 
-  /**
-   * Get mock messages as fallback
-   */
-  private getMockMessages(channelId: string): Message[] {
-    console.log('MessageService: Using mock messages as fallback for channel:', channelId)
-    
-    // ✅ CACHE: Verificar se há mensagens em cache para este canal
-    const cachedMessages = this.getMessagesFromCache(channelId)
-    console.log('MessageService: Found cached messages:', cachedMessages.length)
-    
-    // ✅ BASE: Mensagens padrão do canal com UUIDs válidos
-    const messageId1 = this.generateValidUUID()
-    const messageId2 = this.generateValidUUID()
-    const userId1 = this.generateValidUUID()
-    const userId2 = this.generateValidUUID()
-    
-    const baseMessages: Message[] = [
-      {
-        id: messageId1,
-        content: 'Welcome to the channel! 👋',
-        type: 'text',
-        author_id: userId1,
-        channel_id: channelId,
-        dm_id: null,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 60000).toISOString(), // 1 minuto atrás
-        updated_at: new Date(Date.now() - 60000).toISOString()
-      },
-      {
-        id: messageId2,
-        content: 'This is a test message',
-        type: 'text',
-        author_id: userId2,
-        channel_id: channelId,
-        dm_id: null,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 30000).toISOString(), // 30 segundos atrás
-        updated_at: new Date(Date.now() - 30000).toISOString()
-      }
-    ]
-    
-    // ✅ COMBINAR: Base messages + cached messages
-    const allMessages = [...baseMessages, ...cachedMessages]
-    
-    // ✅ ORDENAR: Por timestamp de criação
-    allMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-    
-    console.log('MessageService: Returning combined messages - Base:', baseMessages.length, 'Cached:', cachedMessages.length, 'Total:', allMessages.length)
-    return allMessages
-  }
 
   /**
    * Send a message to a channel
@@ -555,18 +534,10 @@ export class MessageService {
     console.log('MessageService.sendMessage: Called with:', message)
     
     try {
-      // ✅ FALLBACK CHECK: Se estiver em modo fallback, usar mock data imediatamente
+      // ✅ FALLBACK CHECK: Se estiver em modo fallback, retornar erro
       if (this.useFallbackMode) {
-        console.log('MessageService.sendMessage: Using fallback mode, skipping Supabase insert')
-        const mockMessage = this.getMockMessage(message)
-        
-        // ✅ CACHE: Adicionar mensagem ao cache local
-        if (message.channel_id) {
-          this.addMessageToCache(message.channel_id, mockMessage)
-          console.log('MessageService.sendMessage: Message added to cache for channel:', message.channel_id)
-        }
-        
-        return mockMessage
+        console.log('MessageService.sendMessage: Using fallback mode, cannot send message')
+        throw new Error('Cannot send message in fallback mode')
       }
       
       // ✅ VERIFICAÇÃO ADICIONAL: Se for um canal mock, tentar salvar no Supabase mesmo assim
@@ -616,18 +587,11 @@ export class MessageService {
         // ✅ DETECTAR: Se é erro de foreign key constraint
         if (error.code === '23503' || error.message?.includes('foreign key constraint')) {
           console.error('MessageService.sendMessage: Foreign key constraint error detected - channel does not exist')
-          console.error('MessageService.sendMessage: Using fallback mode for this message')
+          console.error('MessageService.sendMessage: This suggests the channel was not created in the database')
+          console.error('MessageService.sendMessage: Channel ID:', message.channel_id, 'Real Channel ID:', realChannelId)
           
-          // ✅ FALLBACK: Usar mock data para este canal
-          const mockMessage = this.getMockMessage(message)
-          
-          // ✅ CACHE: Adicionar mensagem ao cache local
-          if (message.channel_id) {
-            this.addMessageToCache(message.channel_id, mockMessage)
-            console.log('MessageService.sendMessage: Message added to cache for channel:', message.channel_id)
-          }
-          
-          return mockMessage
+          // ✅ THROW ERROR: Não usar fallback, deixar o erro aparecer
+          throw new Error(`Canal não existe no banco de dados. Channel ID: ${message.channel_id} (Real: ${realChannelId})`)
         }
         
         // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
@@ -647,9 +611,9 @@ export class MessageService {
         return data
       }
 
-      // ✅ FALLBACK: Se não retornou dados, usar mock
-      console.log('MessageService.sendMessage: No data returned from Supabase, using mock data')
-      return this.getMockMessage(message)
+      // ✅ FALLBACK: Se não retornou dados, lançar erro
+      console.log('MessageService.sendMessage: No data returned from Supabase')
+      throw new Error('Failed to send message - no data returned from Supabase')
       
     } catch (error) {
       console.error('MessageService.sendMessage: Caught error:', error)
@@ -660,68 +624,6 @@ export class MessageService {
     }
   }
 
-  /**
-   * Get mock message as fallback
-   */
-  private getMockMessage(message: Omit<MessageInsert, 'id' | 'created_at' | 'updated_at'>): Message {
-    console.log('MessageService.getMockMessage: Creating mock message for:', message.content)
-    
-    // ✅ MELHORADO: ID único baseado em timestamp + random + content hash
-    const timestamp = Date.now()
-    const random = Math.random().toString(36).substr(2, 9)
-    const contentHash = message.content ? btoa(message.content).substr(0, 8) : 'empty'
-    const uniqueId = `mock-${timestamp}-${random}-${contentHash}`
-    
-    console.log('MessageService.getMockMessage: Generated unique ID:', uniqueId)
-    
-    // ✅ DETECÇÃO AUTOMÁTICA DE LINKS
-    let messageType = message.type || 'text'
-    let attachmentUrl = message.attachment_url
-    
-    if (message.content && messageType === 'text') {
-      const urls = linkService.extractUrls(message.content)
-      if (urls.length > 0) {
-        const firstUrl = urls[0]
-        const linkType = linkService.detectLinkType(firstUrl)
-        
-        // ✅ ATUALIZAR TIPO E URL DE ANEXO BASEADO NO LINK
-        if (linkType === 'image') {
-          messageType = 'image'
-          attachmentUrl = firstUrl
-        } else if (linkType === 'document') {
-          messageType = 'link'
-          attachmentUrl = firstUrl
-        } else if (linkType === 'youtube' || linkType === 'github' || linkType === 'code') {
-          messageType = 'link'
-          attachmentUrl = firstUrl
-        }
-        
-        console.log('MessageService: Link detected in message:', { 
-          originalType: message.type, 
-          newType: messageType, 
-          url: firstUrl, 
-          linkType 
-        })
-      }
-    }
-    
-    const mockMessage: Message = {
-      id: uniqueId,
-      content: message.content,
-      type: messageType,
-      author_id: message.author_id,
-      channel_id: message.channel_id || null,
-      dm_id: message.dm_id || null,
-      attachment_name: message.attachment_name || null,
-      attachment_url: attachmentUrl || null,
-      data_ai_hint: message.data_ai_hint || null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-    
-    console.log('MessageService.getMockMessage: Created mock message with link detection:', mockMessage)
-    return mockMessage
-  }
 
   /**
    * Subscribe to real-time message updates for a specific channel
@@ -876,14 +778,8 @@ export class MessageService {
       console.log('MessageService: isMockChannelId:', this.isMockChannelId(channelId))
       
       if (!this.isValidUUID(channelId) && !this.isMockChannelId(channelId)) {
-        console.log('MessageService: Invalid channelId, using mock users:', channelId)
-        return this.getMockUsers()
-      }
-      
-      // ✅ FALLBACK CHECK: Se estiver em modo fallback, usar mock data imediatamente
-      if (this.useFallbackMode) {
-        console.log('MessageService: Using fallback mode for users, skipping Supabase query')
-        return this.getMockUsers()
+        console.log('MessageService: Invalid channelId, returning empty array:', channelId)
+        return []
       }
       
       // ✅ VERIFICAÇÃO ADICIONAL: Se for um canal mock, tentar buscar do Supabase mesmo assim
@@ -926,8 +822,8 @@ export class MessageService {
         console.log('MessageService: Found user IDs in channel:', userIds)
 
         if (userIds.length === 0) {
-          console.log('MessageService: No users found in channel, using mock users')
-          return this.getMockUsers()
+          console.log('MessageService: No users found in channel, returning empty array')
+          return []
         }
 
         // Buscar dados dos usuários
@@ -946,8 +842,8 @@ export class MessageService {
           })
           // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
           this.incrementErrorCount()
-          console.log('MessageService: User fetch failed, using mock users as fallback')
-          return this.getMockUsers()
+          console.log('MessageService: User fetch failed, returning empty array')
+          return []
         }
 
         if (users && users.length > 0) {
@@ -956,22 +852,40 @@ export class MessageService {
           // ✅ RESETAR CONTADOR: Operação bem-sucedida
           this.errorCount = 0
           
-          // ✅ COMBINAR: Adicionar usuários mock se houver
-          const mockUsers = this.getMockUsers()
-          const allUsers = [...users, ...mockUsers]
+          // ✅ ADICIONAR: Usuário atual autenticado se não estiver na lista
+          const { data: { user: currentUser } } = await this.supabase.auth.getUser()
+          if (currentUser && !users.find(u => u.id === currentUser.id)) {
+            const userDisplayName = currentUser.user_metadata?.full_name || 
+                                   currentUser.user_metadata?.display_name || 
+                                   currentUser.email || 
+                                   'Usuário Atual'
+            
+            const userAvatar = currentUser.user_metadata?.avatar_url || 
+                              currentUser.user_metadata?.picture ||
+                              `https://ui-avatars.com/api/?name=${encodeURIComponent(userDisplayName)}&background=random`
+            
+            users.push({
+              id: currentUser.id,
+              display_name: userDisplayName,
+              handle: currentUser.email?.split('@')[0] || 'usuario',
+              avatar_url: userAvatar,
+              status: 'online'
+            })
+            console.log('MessageService: Added current authenticated user to users list:', {
+              id: currentUser.id,
+              display_name: userDisplayName,
+              avatar_url: userAvatar
+            })
+          }
           
-          // ✅ REMOVER DUPLICATAS: Por ID
-          const uniqueUsers = allUsers.filter((user, index, self) => 
-            index === self.findIndex(u => u.id === user.id)
-          )
-          
-          console.log('MessageService: Returning combined users - Real:', users.length, 'Mock:', mockUsers.length, 'Total:', uniqueUsers.length)
-          return uniqueUsers
+          // ✅ RETORNAR: Apenas usuários reais do Supabase
+          console.log('MessageService: Returning users from Supabase:', users.length)
+          return users
         }
 
-        // ✅ SE VAZIO: Retornar apenas usuários mock
-        console.log('MessageService: No real users found, using mock users')
-        return this.getMockUsers()
+        // ✅ SE VAZIO: Retornar array vazio
+        console.log('MessageService: No real users found, returning empty array')
+        return []
         
       } catch (error) {
         console.error('Error in Supabase user query:', {
@@ -981,61 +895,15 @@ export class MessageService {
         })
         // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
         this.incrementErrorCount()
-        console.log('MessageService: User query failed, using mock users as fallback')
-        return this.getMockUsers()
+        console.log('MessageService: User query failed, returning empty array')
+        return []
       }
     } catch (error) {
       console.error('Error getting channel users:', error)
-      return this.getMockUsers()
+      return []
     }
   }
 
-  /**
-   * Get mock users as fallback
-   */
-  private getMockUsers(): any[] {
-    console.log('MessageService: Using mock users as fallback')
-    
-    // ✅ BASE: Usuários padrão
-    const baseUsers = [
-      {
-        id: 'user1',
-        display_name: 'John Doe',
-        handle: 'johndoe',
-        avatar_url: 'https://i.pravatar.cc/40?u=john',
-        status: 'online'
-      },
-      {
-        id: 'user2',
-        display_name: 'Jane Smith',
-        handle: 'janesmith',
-        avatar_url: 'https://i.pravatar.cc/40?u=jane',
-        status: 'away'
-      },
-      // ✅ ADICIONAR: Usuário atual para mensagens enviadas
-      {
-        id: 'e4c9d0f8-b54c-4f17-9487-92872db095ab',
-        display_name: 'Current User',
-        handle: 'currentuser',
-        avatar_url: 'https://i.pravatar.cc/40?u=current',
-        status: 'online'
-      }
-    ]
-    
-    // ✅ CACHE: Adicionar usuários em cache
-    const cachedUsers = Array.from(this.mockUserCache.values())
-    
-    // ✅ COMBINAR: Base users + cached users
-    const allUsers = [...baseUsers, ...cachedUsers]
-    
-    // ✅ REMOVER: Duplicatas baseado em ID
-    const uniqueUsers = allUsers.filter((user, index, self) => 
-      index === self.findIndex(u => u.id === user.id)
-    )
-    
-    console.log('MessageService: Returning users - Base:', baseUsers.length, 'Cached:', cachedUsers.length, 'Total:', uniqueUsers.length)
-    return uniqueUsers
-  }
 
   /**
    * Validate if a string is a valid UUID
@@ -1280,95 +1148,7 @@ export class MessageService {
     }
   }
 
-  /**
-   * Get mock DM messages for fallback
-   */
-  private getMockDMMessages(dmId: string): Message[] {
-    console.log('MessageService: Creating mock DM messages for dmId:', dmId)
-    
-    const mockMessages: Message[] = [
-      {
-        id: `mock-dm-message-${dmId}-1`,
-        content: 'Olá! Como você está?',
-        type: 'text',
-        author_id: 'e4c9d0f8-b54c-4f17-9487-92872db095ab', // ✅ ID real do usuário dev
-        channel_id: null,
-        dm_id: dmId,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 300000).toISOString(),
-        updated_at: new Date(Date.now() - 300000).toISOString()
-      },
-      {
-        id: `mock-dm-message-${dmId}-2`,
-        content: 'Tudo bem! E você?',
-        type: 'text',
-        author_id: '550e8400-e29b-41d4-a716-446655440001', // ✅ ID real de outro usuário
-        channel_id: null,
-        dm_id: dmId,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 240000).toISOString(),
-        updated_at: new Date(Date.now() - 240000).toISOString()
-      },
-      {
-        id: `mock-dm-message-${dmId}-3`,
-        content: 'Ótimo! Estou trabalhando no projeto novo.',
-        type: 'text',
-        author_id: 'e4c9d0f8-b54c-4f17-9487-92872db095ab', // ✅ ID real do usuário dev
-        channel_id: null,
-        dm_id: dmId,
-        attachment_name: null,
-        attachment_url: null,
-        data_ai_hint: null,
-        created_at: new Date(Date.now() - 180000).toISOString(),
-        updated_at: new Date(Date.now() - 180000).toISOString()
-      }
-    ]
-    
-    console.log('MessageService: Created mock DM messages:', mockMessages)
-    return mockMessages
-  }
 
-  /**
-   * Get mock DM message for fallback
-   */
-  private getMockDMMessage(dmId: string, content: string, authorId: string): Message {
-    console.log('MessageService: Creating mock DM message:', { dmId, content, authorId })
-    
-    const mockMessage: Message = {
-      id: `mock-dm-message-${dmId}-${Date.now()}`,
-      content,
-      type: 'text',
-      author_id: authorId,
-      channel_id: null,
-      dm_id: dmId,
-      attachment_name: null,
-      attachment_url: null,
-      data_ai_hint: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-    
-    console.log('MessageService: Created mock DM message:', mockMessage)
-    return mockMessage
-  }
-
-  /**
-   * Add message to DM cache
-   */
-  private addMessageToDMCache(dmId: string, message: Message): void {
-    console.log('MessageService: Adding message to DM cache:', { dmId, messageId: message.id })
-    
-    const existingMessages = this.mockMessageCache.get(dmId) || []
-    const updatedMessages = [...existingMessages, message]
-    
-    this.mockMessageCache.set(dmId, updatedMessages)
-    
-    console.log('MessageService: DM cache updated. Total messages:', updatedMessages.length)
-  }
 
   /**
    * Gerar UUID válido para mensagens mock

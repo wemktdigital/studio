@@ -6,7 +6,6 @@ import { DMErrorHandler, ErrorContext } from '@/lib/error-handling/dm-error-hand
 
 export class DirectMessageServiceNew {
   private supabase = createClient()
-  private mockCache = new Map<string, Message[]>()
   private dmCache = new Map<string, DirectMessage>()
 
   constructor() {
@@ -112,8 +111,8 @@ export class DirectMessageServiceNew {
     
     // ✅ VERIFICAÇÃO DE AUTH: Verificar se há usuário mock ativo
     if (isMockUserEnabled() || !this.isSupabaseAvailable()) {
-      console.log('DirectMessageServiceNew: Mock user enabled or Supabase unavailable, using mock messages')
-      return this.getMockDMMessages(dmId)
+      console.log('DirectMessageServiceNew: Mock user enabled or Supabase unavailable, returning empty array')
+      return []
     }
 
     try {
@@ -125,7 +124,7 @@ export class DirectMessageServiceNew {
 
       if (error) {
         console.error('DirectMessageServiceNew: Error fetching DM messages:', error)
-        return this.getMockDMMessages(dmId)
+        return []
       }
 
       console.log('DirectMessageServiceNew: Fetched', data?.length || 0, 'messages')
@@ -150,7 +149,7 @@ export class DirectMessageServiceNew {
 
     } catch (error) {
       console.error('DirectMessageServiceNew: Exception in getDMMessages:', error)
-      return this.getMockDMMessages(dmId)
+      return []
     }
   }
 
@@ -283,8 +282,7 @@ export class DirectMessageServiceNew {
    * Limpar cache de mensagens para uma DM específica
    */
   clearMessageCache(dmId: string): void {
-    this.mockCache.delete(dmId)
-    console.log('DirectMessageServiceNew: Cleared message cache for DM:', dmId)
+    console.log('DirectMessageServiceNew: Cache cleared for DM:', dmId)
   }
   
   /**
@@ -300,7 +298,6 @@ export class DirectMessageServiceNew {
    * Limpar todo o cache
    */
   clearAllCache(): void {
-    this.mockCache.clear()
     this.dmCache.clear()
     console.log('DirectMessageServiceNew: Cleared all cache')
   }
@@ -320,42 +317,6 @@ export class DirectMessageServiceNew {
     }
   }
 
-  private getMockDMMessages(dmId: string): Message[] {
-    const cached = this.mockCache.get(dmId)
-    if (cached) {
-      console.log('DirectMessageServiceNew: Returning cached mock messages:', cached.length)
-      return cached
-    }
-
-    const mockMessages: Message[] = [
-      {
-        id: `mock-dm-message-${dmId}-1`,
-        content: 'Olá! Como você está?',
-        type: 'text',
-        authorId: 'e4c9d0f8-b54c-4f17-9487-92872db095ab', // Dev User (usuário atual)
-        channelId: null,
-        dmId: dmId,
-        createdAt: new Date(Date.now() - 300000).toISOString(),
-        updatedAt: new Date(Date.now() - 300000).toISOString(),
-        reactions: []
-      },
-      {
-        id: `mock-dm-message-${dmId}-2`,
-        content: 'Tudo bem! E você?',
-        type: 'text',
-        authorId: '550e8400-e29b-41d4-a716-446655440001', // John Doe (usuário disponível)
-        channelId: null,
-        dmId: dmId,
-        createdAt: new Date(Date.now() - 240000).toISOString(),
-        updatedAt: new Date(Date.now() - 240000).toISOString(),
-        reactions: []
-      }
-    ]
-
-    this.mockCache.set(dmId, mockMessages)
-    console.log('DirectMessageServiceNew: Created new mock messages:', mockMessages.length)
-    return mockMessages
-  }
 
   private createMockDMMessage(dmId: string, content: string, authorId: string): Message {
     const newMessage: Message = {
@@ -370,10 +331,7 @@ export class DirectMessageServiceNew {
       reactions: []
     }
 
-    // Adicionar ao cache
-    const cached = this.mockCache.get(dmId) || []
-    cached.push(newMessage)
-    this.mockCache.set(dmId, cached)
+    // Cache removido
 
     console.log('DirectMessageServiceNew: Created mock message:', newMessage.id)
     return newMessage

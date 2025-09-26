@@ -117,6 +117,8 @@ export function useChannel(channelId: string) {
         // ✅ VALIDAÇÃO: Verificar se channelService tem o método getChannel
         if (!channelService || typeof channelService.getChannel !== 'function') {
           console.error('🔍 useChannel: channelService.getChannel method not available')
+          console.error('🔍 useChannel: channelService type:', typeof channelService)
+          console.error('🔍 useChannel: channelService methods:', channelService ? Object.getOwnPropertyNames(channelService) : 'null')
           throw new Error('ChannelService.getChannel method not available')
         }
         

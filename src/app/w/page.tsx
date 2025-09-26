@@ -6,17 +6,44 @@ import { useAuthContext } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Users, Hash, Plus, ArrowRight } from 'lucide-react'
+import { Users, Hash, Plus, ArrowRight, Shield, User } from 'lucide-react'
 import { CreateWorkspaceDialog } from '@/components/slack/create-workspace-dialog'
 import { WorkspaceManagement } from '@/components/slack/workspace-management'
 import { LogoutButton } from '@/components/slack/logout-button'
+import { workspaceService } from '@/lib/services'
+import { useEffect, useState } from 'react'
 
 export default function WorkspacesPage() {
   const router = useRouter()
   const { user, loading: userLoading } = useAuthContext()
   const { workspaces, isLoading, error, refetch } = useWorkspaces()
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
+  const [adminLoading, setAdminLoading] = useState<boolean>(true)
 
-  if (userLoading) {
+  // ✅ VERIFICAR STATUS DE ADMIN
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setAdminLoading(false)
+        return
+      }
+
+      try {
+        const adminStatus = await workspaceService.isUserAdmin()
+        setIsAdmin(adminStatus)
+        console.log('WorkspacesPage: Admin status:', adminStatus)
+      } catch (error) {
+        console.error('Error checking admin status:', error)
+        setIsAdmin(false)
+      } finally {
+        setAdminLoading(false)
+      }
+    }
+
+    checkAdminStatus()
+  }, [user])
+
+  if (userLoading || adminLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -38,13 +65,46 @@ export default function WorkspacesPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Your Workspaces</h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-3xl font-bold">Your Workspaces</h1>
+              {isAdmin && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  Admin
+                </Badge>
+              )}
+            </div>
             <p className="text-muted-foreground">
-              Welcome back, {user.email}! Choose a workspace to get started.
+              Welcome back, {user.email}! {isAdmin ? 'You have access to all workspaces.' : 'Choose a workspace to get started.'}
             </p>
           </div>
           <CreateWorkspaceDialog />
         </div>
+
+        {/* Access Control Info */}
+        {workspaces.length > 0 && (
+          <div className="mb-6 p-4 bg-muted/20 rounded-lg border">
+            <div className="flex items-center gap-2 mb-2">
+              {isAdmin ? (
+                <>
+                  <Shield className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium text-blue-700 dark:text-blue-300">Admin Access</span>
+                </>
+              ) : (
+                <>
+                  <User className="h-4 w-4 text-green-500" />
+                  <span className="font-medium text-green-700 dark:text-green-300">User Access</span>
+                </>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {isAdmin 
+                ? "As an admin, you can access all workspaces in the system."
+                : "You can only access workspaces you are a member of."
+              }
+            </p>
+          </div>
+        )}
 
         {/* Workspaces Grid */}
         {isLoading ? (

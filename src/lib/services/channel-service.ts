@@ -114,22 +114,20 @@ export class ChannelService {
       
       if (authError) {
         console.error('ChannelService.getWorkspaceChannels: Auth error:', authError)
-        // ✅ FALLBACK: Retornar canais mock em caso de erro de auth
-        console.log('ChannelService.getWorkspaceChannels: Using mock data due to auth error')
-        return this.getMockWorkspaceChannels(workspaceId)
+        console.log('ChannelService.getWorkspaceChannels: Returning empty array due to auth error')
+        return []
       }
       
       if (!user) {
         console.error('ChannelService.getWorkspaceChannels: No authenticated user')
-        // ✅ FALLBACK: Retornar canais mock em caso de usuário não autenticado
-        console.log('ChannelService.getWorkspaceChannels: Using mock data due to no authenticated user')
-        return this.getMockWorkspaceChannels(workspaceId)
+        console.log('ChannelService.getWorkspaceChannels: Returning empty array due to no authenticated user')
+        return []
       }
 
-      // ✅ DETECÇÃO RLS: Se o teste de conexão falhou, usar mock data imediatamente
+      // ✅ DETECÇÃO RLS: Se o teste de conexão falhou, retornar array vazio
       if (this.connectionTestFailed) {
-        console.log('ChannelService.getWorkspaceChannels: Connection test failed, using mock data immediately')
-        return this.getMockWorkspaceChannels(workspaceId)
+        console.log('ChannelService.getWorkspaceChannels: Connection test failed, returning empty array')
+        return []
       }
       
       // ✅ IMPLEMENTAÇÃO REAL: Tentar buscar dados reais primeiro
@@ -147,10 +145,8 @@ export class ChannelService {
       
       if (error) {
         console.error('ChannelService.getWorkspaceChannels: Supabase error:', error)
-        console.log('ChannelService.getWorkspaceChannels: Falling back to mock data')
-        const mockChannels = this.getMockWorkspaceChannels(workspaceId)
-        console.log('ChannelService.getWorkspaceChannels: Returning mock channels:', mockChannels)
-        return mockChannels
+        console.log('ChannelService.getWorkspaceChannels: Returning empty array due to error')
+        return []
       }
       
       if (data && data.length > 0) {
@@ -169,9 +165,9 @@ export class ChannelService {
       console.error('ChannelService.getWorkspaceChannels: Error keys:', Object.keys(err || {}))
       console.error('ChannelService.getWorkspaceChannels: Full error object:', JSON.stringify(err, null, 2))
       
-      // ✅ FALLBACK: Retornar canais mock em caso de erro
-      console.log('ChannelService.getWorkspaceChannels: Using mock data due to caught error')
-      return this.getMockWorkspaceChannels(workspaceId)
+      // ✅ FALLBACK: Retornar array vazio em caso de erro
+      console.log('ChannelService.getWorkspaceChannels: Returning empty array due to caught error')
+      return []
     }
   }
 

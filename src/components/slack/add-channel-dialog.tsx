@@ -20,7 +20,7 @@ export default function AddChannelDialog({ isOpen, onClose, workspaceId }: AddCh
   const [description, setDescription] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
   
-  const { createChannel, isCreating, error } = useCreateChannel()
+  const { mutateAsync: createChannel, isPending: isCreating, error } = useCreateChannel()
   const { user } = useAuthContext()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,10 +36,21 @@ export default function AddChannelDialog({ isOpen, onClose, workspaceId }: AddCh
     }
 
     try {
+      if (!workspaceId || !user?.id) {
+        toast({
+          title: 'Erro',
+          description: 'Workspace ID ou usuário não encontrado',
+          variant: 'destructive'
+        })
+        return
+      }
+
       await createChannel({
         name: name.trim(),
         description: description.trim() || undefined,
-        isPrivate
+        isPrivate,
+        workspace_id: workspaceId,
+        created_by: user.id
       })
 
       toast({

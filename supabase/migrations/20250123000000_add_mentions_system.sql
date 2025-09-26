@@ -103,10 +103,10 @@ BEGIN
   -- Extract usernames from message content
   FOR username IN SELECT unnest(extract_mentions(p_text_content))
   LOOP
-    -- Find user by username
+    -- Find user by username (using display_name or handle)
     SELECT id INTO mentioned_user_id
     FROM users
-    WHERE username = username
+    WHERE display_name ILIKE username OR handle ILIKE username
     LIMIT 1;
     
     -- If user found and not mentioning themselves, create mention record
@@ -138,7 +138,7 @@ BEGIN
   PERFORM create_message_mentions(
     NEW.id,
     NEW.content,
-    NEW.user_id,
+    NEW.author_id,
     NEW.channel_id,
     NEW.dm_id
   );
@@ -167,7 +167,7 @@ BEGIN
     PERFORM create_message_mentions(
       NEW.id,
       NEW.content,
-      NEW.user_id,
+      NEW.author_id,
       NEW.channel_id,
       NEW.dm_id
     );
