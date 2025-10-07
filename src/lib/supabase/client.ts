@@ -39,10 +39,13 @@ export function isMockUserEnabled(): boolean {
 
 // ✅ FUNÇÃO: Criar cliente Supabase com tratamento de SSR
 export function createClient() {
-  // ✅ SSR CHECK: Não criar cliente no servidor
+  // ✅ SSR CHECK: Criar cliente mesmo no servidor para build
   if (typeof window === 'undefined') {
-    console.log('createClient: SSR detected, returning null')
-    return null as any
+    console.log('createClient: SSR detected, creating server client')
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
   }
   
   console.log('createClient: Called (client-side)')
