@@ -3,6 +3,7 @@
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { type ThemeProviderProps } from "next-themes/dist/types";
 import { AuthProvider } from "./providers/auth-provider";
+import { AuthErrorBoundary } from "./auth/error-boundary";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { RightPaneProvider } from "@/hooks/use-right-pane";
@@ -19,13 +20,15 @@ export function Providers({ children, ...props }: ThemeProviderProps) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RightPaneProvider>
-          <NextThemesProvider {...props} attribute="class" defaultTheme="system" enableSystem>
-            {children}
-          </NextThemesProvider>
-        </RightPaneProvider>
-      </AuthProvider>
+      <AuthErrorBoundary>
+        <AuthProvider>
+          <RightPaneProvider>
+            <NextThemesProvider {...props} attribute="class" defaultTheme="system" enableSystem>
+              {children}
+            </NextThemesProvider>
+          </RightPaneProvider>
+        </AuthProvider>
+      </AuthErrorBoundary>
     </QueryClientProvider>
   );
 }

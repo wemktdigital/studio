@@ -123,9 +123,23 @@ export function useAuth() {
         // Tratar erros de token inválido
         if (event === 'TOKEN_REFRESHED' && !session) {
           console.log('useAuth: Token refresh failed, clearing session')
+          await clearInvalidTokens()
+          await supabase.auth.signOut()
           setSession(null)
           setUser(null)
           setLoading(false)
+          return
+        }
+        
+        // Tratar erro específico de refresh token
+        if (event === 'TOKEN_REFRESHED' && session === null) {
+          console.log('useAuth: Invalid refresh token, clearing auth data')
+          await clearInvalidTokens()
+          await supabase.auth.signOut()
+          setSession(null)
+          setUser(null)
+          setLoading(false)
+          router.push('/auth/login')
           return
         }
         

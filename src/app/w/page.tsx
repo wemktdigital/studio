@@ -6,7 +6,7 @@ import { useAuthContext } from '@/components/providers/auth-provider'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Users, Hash, Plus, ArrowRight, Shield, User } from 'lucide-react'
+import { Users, Hash, Plus, ArrowRight, Shield, User, Crown } from 'lucide-react'
 import { CreateWorkspaceDialog } from '@/components/slack/create-workspace-dialog'
 import { WorkspaceManagement } from '@/components/slack/workspace-management'
 import { LogoutButton } from '@/components/slack/logout-button'
@@ -78,7 +78,19 @@ export default function WorkspacesPage() {
               Welcome back, {user.email}! {isAdmin ? 'You have access to all workspaces.' : 'Choose a workspace to get started.'}
             </p>
           </div>
-          <CreateWorkspaceDialog />
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => router.push('/admin')}
+                className="flex items-center gap-2"
+              >
+                <Crown className="h-4 w-4 text-yellow-500" />
+                Painel Admin
+              </Button>
+            )}
+            <CreateWorkspaceDialog />
+          </div>
         </div>
 
         {/* Access Control Info */}

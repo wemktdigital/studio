@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Guia de Administração - Studio</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 3rem;
+    }
+
+    .header h1 {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h2 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    .card p {
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .card-link {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.3s;
+    }
+
+    .card-link:hover {
+      background: #5a67d8;
+    }
+
+    .quick-links {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .quick-links h2 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+
+    .quick-link {
+      display: flex;
+      align-items: center;
+      padding: 1rem;
+      background: #f7fafc;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #333;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .quick-link:hover {
+      background: #edf2f7;
+      border-color: #667eea;
+      transform: translateX(5px);
+    }
+
+    .quick-link-icon {
+      font-size: 1.5rem;
+      margin-right: 0.75rem;
+    }
+
+    .quick-link-text {
+      flex: 1;
+    }
+
+    .quick-link-title {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .quick-link-desc {
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    .steps {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      margin-top: 2rem;
+    }
+
+    .steps h2 {
+      color: #333;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .step {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #f7fafc;
+      border-radius: 8px;
+    }
+
+    .step-number {
+      background: #667eea;
+      color: white;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+
+    .step-content {
+      flex: 1;
+    }
+
+    .step-title {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    .step-desc {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    code {
+      background: #f1f5f9;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      color: #e53e3e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 Guia de Administração</h1>
+      <p>Gerencie usuários e workspaces facilmente</p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <h2>Gerenciar Usuários</h2>
+        <p>Adicione, remova e gerencie membros do seu workspace. Controle permissões e cargos.</p>
+        <a href="/w" class="card-link">Acessar Workspaces</a>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">⚙️</div>
+        <h2>Configurações</h2>
+        <p>Configure seu workspace, defina permissões e personalize as configurações.</p>
+        <a href="#" onclick="alert('Acesse: /w/[workspaceId]/settings'); return false;" class="card-link">Ver Como</a>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">📧</div>
+        <h2>Sistema de Convites</h2>
+        <p>Envie convites por email para novos membros. Gerencie convites pendentes.</p>
+        <a href="#" onclick="alert('Vá para Settings → Membros → Adicionar'); return false;" class="card-link">Convidar</a>
+      </div>
+    </div>
+
+    <div class="quick-links">
+      <h2>🔗 Links Rápidos</h2>
+      <div class="links-grid">
+        <a href="/w" class="quick-link">
+          <div class="quick-link-icon">🏢</div>
+          <div class="quick-link-text">
+            <div class="quick-link-title">Workspaces</div>
+            <div class="quick-link-desc">Ver todos</div>
+          </div>
+        </a>
+
+        <a href="/auth/profile" class="quick-link">
+          <div class="quick-link-icon">👤</div>
+          <div class="quick-link-text">
+            <div class="quick-link-title">Meu Perfil</div>
+            <div class="quick-link-desc">Configurações pessoais</div>
+          </div>
+        </a>
+
+        <a href="https://supabase.com" target="_blank" class="quick-link">
+          <div class="quick-link-icon">🗄️</div>
+          <div class="quick-link-text">
+            <div class="quick-link-title">Supabase</div>
+            <div class="quick-link-desc">Banco de dados</div>
+          </div>
+        </a>
+
+        <a href="/clear-auth.html" class="quick-link">
+          <div class="quick-link-icon">🧹</div>
+          <div class="quick-link-text">
+            <div class="quick-link-title">Limpar Cache</div>
+            <div class="quick-link-desc">Resolver problemas</div>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <div class="steps">
+      <h2>📝 Como Adicionar um Novo Usuário</h2>
+
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <div class="step-title">Acesse o Workspace</div>
+          <div class="step-desc">
+            Vá para <code>/w</code> e escolha o workspace desejado, ou acesse diretamente 
+            <code>/w/[workspaceId]</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <div class="step-title">Abra as Configurações</div>
+          <div class="step-desc">
+            Clique no ícone de engrenagem <strong>⚙️</strong> no canto superior direito, 
+            ou acesse <code>/w/[workspaceId]/settings</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <div class="step-title">Vá para a Aba "Membros"</div>
+          <div class="step-desc">
+            Na página de configurações, clique na aba <strong>"Membros"</strong>. 
+            Você verá a lista de todos os membros atuais do workspace.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <div class="step-title">Adicione Novo Membro</div>
+          <div class="step-desc">
+            Clique no botão <strong>"+ Adicionar Membro"</strong>. 
+            Preencha: <strong>Nome</strong>, <strong>Email</strong> e escolha o <strong>Cargo</strong> 
+            (Admin, Member ou Guest).
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">5</div>
+        <div class="step-content">
+          <div class="step-title">Envie o Convite</div>
+          <div class="step-desc">
+            Clique em <strong>"Enviar Convite"</strong>. O sistema enviará um email automático 
+            para o usuário com um link de acesso. O status ficará como <strong>"Pendente"</strong> 
+            até que o usuário aceite o convite.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">✅</div>
+        <div class="step-content">
+          <div class="step-title">Pronto!</div>
+          <div class="step-desc">
+            O novo membro receberá um email e poderá acessar o workspace após aceitar o convite. 
+            Você pode reenviar o convite a qualquer momento se necessário.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="steps" style="margin-top: 2rem;">
+      <h2>🔍 Estrutura de URLs</h2>
+
+      <div class="step">
+        <div class="step-number">🏠</div>
+        <div class="step-content">
+          <div class="step-title">/w</div>
+          <div class="step-desc">
+            <strong>Lista de Workspaces</strong> - Veja todos os workspaces que você tem acesso. 
+            Se for admin, verá todos os workspaces do sistema.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">💼</div>
+        <div class="step-content">
+          <div class="step-title">/w/[workspaceId]</div>
+          <div class="step-desc">
+            <strong>Workspace Específico</strong> - Interface principal do workspace com canais, 
+            DMs e mensagens.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">⚙️</div>
+        <div class="step-content">
+          <div class="step-title">/w/[workspaceId]/settings</div>
+          <div class="step-desc">
+            <strong>Configurações</strong> - AQUI você gerencia membros, permissões e configurações 
+            do workspace. Principal página de administração!
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">📊</div>
+        <div class="step-content">
+          <div class="step-title">/w/[workspaceId]/audit</div>
+          <div class="step-desc">
+            <strong>Auditoria</strong> - Veja logs de atividades, quem fez o quê e quando.
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">📧</div>
+        <div class="step-content">
+          <div class="step-title">/invite/[token]</div>
+          <div class="step-desc">
+            <strong>Aceitar Convite</strong> - URL que os novos usuários recebem por email 
+            para aceitar o convite do workspace.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Adicionar funcionalidade aos links
+    document.querySelectorAll('.card-link, .quick-link').forEach(link => {
+      link.addEventListener('click', function(e) {
+        const href = this.getAttribute('href');
+        if (href && href !== '#' && !href.startsWith('http')) {
+          e.preventDefault();
+          window.location.href = href;
+        }
+      });
+    });
+
+    // Log útil
+    console.log('%c🎯 Guia de Administração', 'font-size: 20px; font-weight: bold; color: #667eea;');
+    console.log('%cURLs Importantes:', 'font-size: 14px; font-weight: bold;');
+    console.log('• Lista de Workspaces: /w');
+    console.log('• Settings: /w/[workspaceId]/settings');
+    console.log('• Auditoria: /w/[workspaceId]/audit');
+    console.log('• Perfil: /auth/profile');
+    console.log('• Limpar Cache: /clear-auth.html');
+  </script>
+</body>
+</html>
+

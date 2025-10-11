@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Limpar Cache de Autenticação</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .container {
+      background: white;
+      padding: 3rem;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 500px;
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 1rem;
+    }
+    .emoji {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+    button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin: 0.5rem;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    .success {
+      color: #22c55e;
+      font-weight: bold;
+      margin-top: 1rem;
+      display: none;
+    }
+    .info {
+      color: #666;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="emoji">🧹</div>
+    <h1>Limpar Cache de Autenticação</h1>
+    <p>Use este utilitário para resolver o erro:</p>
+    <p><strong>"Invalid Refresh Token: Refresh Token Not Found"</strong></p>
+    
+    <button onclick="clearCache()">🗑️ Limpar Cache</button>
+    <button onclick="clearAndReload()">🔄 Limpar e Recarregar</button>
+    
+    <div id="success" class="success">✅ Cache limpo com sucesso!</div>
+    
+    <div class="info">
+      <p>Isso vai remover:</p>
+      <ul style="text-align: left; display: inline-block;">
+        <li>Tokens de autenticação</li>
+        <li>Sessões antigas</li>
+        <li>Cookies do Supabase</li>
+        <li>LocalStorage e SessionStorage</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function clearCache() {
+      // Limpar localStorage
+      localStorage.clear();
+      
+      // Limpar sessionStorage
+      sessionStorage.clear();
+      
+      // Limpar cookies
+      document.cookie.split(";").forEach(c => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
+      // Mostrar mensagem de sucesso
+      document.getElementById('success').style.display = 'block';
+      
+      console.log('✅ Cache limpo com sucesso!');
+    }
+    
+    function clearAndReload() {
+      clearCache();
+      setTimeout(() => {
+        window.location.href = '/auth/login';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
+

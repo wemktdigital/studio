@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎉 Painel Admin Criado!</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 800px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      animation: slideIn 0.5s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .emoji {
+      font-size: 5rem;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    h1 {
+      color: #333;
+      margin: 1rem 0;
+      font-size: 2.5rem;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 1.2rem;
+    }
+
+    .features {
+      margin: 2rem 0;
+    }
+
+    .feature {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: #f7fafc;
+      border-radius: 12px;
+      transition: all 0.3s;
+    }
+
+    .feature:hover {
+      background: #edf2f7;
+      transform: translateX(5px);
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+
+    .feature-content h3 {
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-content p {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .steps {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 2rem;
+      border-radius: 12px;
+      margin: 2rem 0;
+    }
+
+    .steps h2 {
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+    }
+
+    .step-number {
+      background: white;
+      color: #667eea;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 1.2rem;
+      margin-right: 1rem;
+      flex-shrink: 0;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      display: block;
+      padding: 1rem 2rem;
+      border-radius: 8px;
+      text-decoration: none;
+      text-align: center;
+      font-weight: 600;
+      transition: all 0.3s;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5a67d8;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f7fafc;
+      color: #333;
+      border: 2px solid #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #edf2f7;
+      border-color: #cbd5e0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 1.5rem;
+      background: #f7fafc;
+      border-radius: 12px;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: #667eea;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    code {
+      background: #2d3748;
+      color: #68d391;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="emoji">👑</div>
+      <h1>Painel Admin Criado!</h1>
+      <p class="subtitle">Gerencie usuários e workspaces visualmente</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-number">1</span>
+        <span class="stat-label">Painel Completo</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">3</span>
+        <span class="stat-label">Abas de Gestão</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">100%</span>
+        <span class="stat-label">Funcional</span>
+      </div>
+    </div>
+
+    <div class="features">
+      <h2 style="margin-bottom: 1.5rem; color: #333;">✨ Funcionalidades</h2>
+
+      <div class="feature">
+        <div class="feature-icon">👥</div>
+        <div class="feature-content">
+          <h3>Criar Usuários Manualmente</h3>
+          <p>Adicione usuários sem necessidade de convite por email. Defina senha e nível de acesso na hora!</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">🔗</div>
+        <div class="feature-content">
+          <h3>Vincular a Workspaces</h3>
+          <p>Associe usuários a workspaces facilmente. Escolha o cargo (Admin, Member, Guest) na vinculação.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">📊</div>
+        <div class="feature-content">
+          <h3>Estatísticas em Tempo Real</h3>
+          <p>Veja quantos usuários, workspaces, canais e mensagens você tem no sistema.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-content">
+          <h3>Busca Poderosa</h3>
+          <p>Encontre qualquer usuário rapidamente buscando por nome ou email.</p>
+        </div>
+      </div>
+
+      <div class="feature">
+        <div class="feature-icon">🔓</div>
+        <div class="feature-content">
+          <h3>Gerenciar Vínculos</h3>
+          <p>Veja todos os vínculos usuário ↔ workspace. Desvincule com um clique.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <h2>🚀 Como Começar</h2>
+      
+      <div class="step">
+        <div class="step-number">1</div>
+        <div>Torne-se Super Admin no Supabase: <code>user_level = 'super_admin'</code></div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <div>Faça logout e login novamente no sistema</div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <div>Clique no botão <strong>"👑 Painel Admin"</strong> em /w</div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">4</div>
+        <div>Pronto! Comece a gerenciar usuários e workspaces</div>
+      </div>
+    </div>
+
+    <div class="buttons">
+      <a href="/admin" class="btn btn-primary">
+        👑 Acessar Painel Admin
+      </a>
+      <a href="/w" class="btn btn-secondary">
+        🏢 Ver Workspaces
+      </a>
+      <a href="/admin-guide.html" class="btn btn-secondary">
+        📚 Guia Completo
+      </a>
+    </div>
+
+    <div style="margin-top: 2rem; padding: 1.5rem; background: #fff5f5; border-left: 4px solid #fc8181; border-radius: 8px;">
+      <strong style="color: #c53030; display: block; margin-bottom: 0.5rem;">⚠️ Importante:</strong>
+      <p style="color: #742a2a; line-height: 1.6;">
+        Você precisa ser <strong>Super Admin</strong> para acessar o painel. 
+        Edite seu usuário no Supabase e defina <code>user_level = 'super_admin'</code>.
+      </p>
+    </div>
+
+    <div style="margin-top: 2rem; text-align: center; color: #666;">
+      <p>📖 Leia a documentação completa em: <code>GUIA_PAINEL_ADMIN.md</code></p>
+      <p style="margin-top: 0.5rem;">💡 URL do painel: <code>http://localhost:9002/admin</code></p>
+    </div>
+  </div>
+
+  <script>
+    console.log('%c👑 PAINEL DE ADMINISTRAÇÃO', 'font-size: 24px; font-weight: bold; color: #667eea;');
+    console.log('%c✅ Criado com sucesso!', 'font-size: 16px; color: #48bb78;');
+    console.log('');
+    console.log('📍 Acesse: /admin');
+    console.log('📚 Documentação: GUIA_PAINEL_ADMIN.md');
+    console.log('');
+    console.log('%cFuncionalidades:', 'font-weight: bold;');
+    console.log('  ✅ Criar usuários manualmente');
+    console.log('  ✅ Vincular usuários a workspaces');
+    console.log('  ✅ Gerenciar permissões');
+    console.log('  ✅ Ver estatísticas do sistema');
+    console.log('  ✅ Buscar usuários');
+    console.log('  ✅ Desvincular usuários');
+  </script>
+</body>
+</html>
+
