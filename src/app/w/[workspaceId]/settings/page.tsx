@@ -120,6 +120,12 @@ export default function WorkspaceSettingsPage() {
     email: '',
     role: 'member'
   })
+  
+  // Estados para link compartilhável
+  const [sharedInviteLink, setSharedInviteLink] = useState<string | null>(null)
+  const [sharedInviteToken, setSharedInviteToken] = useState<string | null>(null)
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false)
+  const [showInviteLink, setShowInviteLink] = useState(false)
 
   const handleSaveWorkspace = async () => {
     setIsLoading(true)
@@ -262,13 +268,27 @@ export default function WorkspaceSettingsPage() {
 
     setIsLoading(true)
     try {
-      // Simular envio de convite por email
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Gerar token de convite único
-      const inviteToken = `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      const inviteLink = `${window.location.origin}/invite/${inviteToken}`
-      
+      // Enviar convite real via API
+      const response = await fetch('/api/workspace/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: newMember.email,
+          workspaceId: workspaceId,
+          role: newMember.role,
+          message: `Olá ${newMember.name}, você foi convidado para participar do workspace!`
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao enviar convite')
+      }
+
+      // Adicionar membro à lista local
       const member = {
         id: Date.now().toString(),
         name: newMember.name,
@@ -276,7 +296,7 @@ export default function WorkspaceSettingsPage() {
         role: newMember.role,
         status: 'pending', // Status pendente até aceitar o convite
         joinedAt: null,
-        inviteToken: inviteToken,
+        inviteToken: result.data?.invite?.token,
         inviteSentAt: new Date().toISOString()
       }
       
@@ -284,18 +304,21 @@ export default function WorkspaceSettingsPage() {
       setNewMember({ name: '', email: '', role: 'member' })
       setIsAddMemberDialogOpen(false)
       
-      // Simular envio de email (em produção, seria enviado via API)
-      console.log('📧 Convite enviado para:', newMember.email)
-      console.log('🔗 Link de convite:', inviteLink)
+      console.log('✅ Convite enviado com sucesso:', {
+        email: newMember.email,
+        inviteToken: result.data?.invite?.token,
+        emailStats: result.data?.emailStats
+      })
       
       toast({
         title: "Convite enviado!",
         description: `Um convite foi enviado para ${newMember.email}. Eles receberão um email com instruções para acessar o workspace.`,
       })
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Erro ao enviar convite:', error)
       toast({
         title: "Erro",
-        description: "Não foi possível enviar o convite.",
+        description: error.message || "Não foi possível enviar o convite.",
         variant: "destructive"
       })
     } finally {
@@ -306,36 +329,147 @@ export default function WorkspaceSettingsPage() {
   const handleResendInvite = async (email: string, name: string) => {
     setIsLoading(true)
     try {
-      // Simular reenvio de convite
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Gerar novo token de convite
-      const newInviteToken = `invite_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      const inviteLink = `${window.location.origin}/invite/${newInviteToken}`
-      
+      // Reenviar convite via API
+      const response = await fetch('/api/workspace/invite', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          workspaceId: workspaceId,
+          role: 'member',
+          message: `Olá ${name}, você foi convidado para participar do workspace!`
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao reenviar convite')
+      }
+
       // Atualizar o membro com novo token
       setMembers(members.map(member => 
         member.email === email 
-          ? { ...member, inviteToken: newInviteToken, inviteSentAt: new Date().toISOString() }
+          ? { ...member, inviteToken: result.data?.invite?.token, inviteSentAt: new Date().toISOString() }
           : member
       ))
       
-      // Simular envio de email
-      console.log('📧 Convite reenviado para:', email)
-      console.log('🔗 Novo link de convite:', inviteLink)
+      console.log('✅ Convite reenviado:', { email, inviteToken: result.data?.invite?.token })
       
       toast({
         title: "Convite reenviado!",
         description: `Um novo convite foi enviado para ${email}.`,
       })
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Erro ao reenviar convite:', error)
       toast({
         title: "Erro",
-        description: "Não foi possível reenviar o convite.",
+        description: error.message || "Não foi possível reenviar o convite.",
         variant: "destructive"
       })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleGenerateInviteLink = async () => {
+    setIsGeneratingLink(true)
+    try {
+      const response = await fetch('/api/workspace/invite-link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          workspaceId: workspaceId,
+          role: 'member',
+          expiresInDays: 7
+        })
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao gerar link de convite')
+      }
+
+      setSharedInviteLink(result.data.inviteUrl)
+      setSharedInviteToken(result.data.inviteToken)
+      setShowInviteLink(true)
+      
+      console.log('✅ Link de convite gerado:', {
+        inviteUrl: result.data.inviteUrl,
+        expiresAt: result.data.expiresAt
+      })
+      
+      toast({
+        title: "Link de convite gerado!",
+        description: "Link copiado para a área de transferência.",
+      })
+
+      // Copiar para área de transferência
+      await navigator.clipboard.writeText(result.data.inviteUrl)
+      
+    } catch (error: any) {
+      console.error('❌ Erro ao gerar link de convite:', error)
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível gerar o link de convite.",
+        variant: "destructive"
+      })
+    } finally {
+      setIsGeneratingLink(false)
+    }
+  }
+
+  const handleCopyInviteLink = async () => {
+    if (sharedInviteLink) {
+      try {
+        await navigator.clipboard.writeText(sharedInviteLink)
+        toast({
+          title: "Link copiado!",
+          description: "Link de convite copiado para a área de transferência.",
+        })
+      } catch (error) {
+        console.error('❌ Erro ao copiar link:', error)
+        toast({
+          title: "Erro",
+          description: "Não foi possível copiar o link.",
+          variant: "destructive"
+        })
+      }
+    }
+  }
+
+  const handleCancelInviteLink = async () => {
+    if (sharedInviteToken) {
+      try {
+        const response = await fetch(`/api/workspace/invite-link?token=${sharedInviteToken}`, {
+          method: 'DELETE'
+        })
+
+        if (response.ok) {
+          setSharedInviteLink(null)
+          setSharedInviteToken(null)
+          setShowInviteLink(false)
+          
+          toast({
+            title: "Link cancelado!",
+            description: "O link de convite foi cancelado com sucesso.",
+          })
+        } else {
+          throw new Error('Erro ao cancelar link')
+        }
+      } catch (error: any) {
+        console.error('❌ Erro ao cancelar link:', error)
+        toast({
+          title: "Erro",
+          description: error.message || "Não foi possível cancelar o link.",
+          variant: "destructive"
+        })
+      }
     }
   }
 
@@ -939,6 +1073,67 @@ export default function WorkspaceSettingsPage() {
                     checked={settings.allowGuestAccess}
                     onCheckedChange={(checked) => setSettings({...settings, allowGuestAccess: checked})}
                   />
+                </div>
+
+                <Separator />
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-base font-semibold">Link de Convite Compartilhável</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Gere um link que pode ser compartilhado para que pessoas se juntem ao workspace automaticamente
+                    </p>
+                  </div>
+
+                  {!showInviteLink ? (
+                    <Button 
+                      onClick={handleGenerateInviteLink}
+                      disabled={isGeneratingLink}
+                      className="w-full"
+                    >
+                      {isGeneratingLink ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                          Gerando Link...
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Gerar Link de Convite
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Link de Convite Ativo</Label>
+                        <div className="flex items-center space-x-2">
+                          <Input
+                            value={sharedInviteLink || ''}
+                            readOnly
+                            className="flex-1 font-mono text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleCopyInviteLink}
+                          >
+                            <FileText className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={handleCancelInviteLink}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        ⏰ Este link expira em 7 dias. Compartilhe com pessoas que você quer convidar para o workspace.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

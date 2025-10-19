@@ -23,10 +23,11 @@ export function useDMMessagesSimple(dmId: string, workspaceId?: string) {
       return await messageService.getDirectMessageMessages(dmId, user?.id, workspaceId)
     },
     enabled: !!dmId,
-    staleTime: 0,
+    staleTime: 0, // Sempre buscar dados frescos
     retry: 1,
-    refetchOnWindowFocus: false,
-    gcTime: 10 * 60 * 1000
+    refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
+    refetchOnMount: true, // Refetch quando o componente monta
+    gcTime: 0 // Sem cache para forçar sempre buscar dados frescos
   })
 
   // ✅ INTEGRADO: Users query usando MessageService

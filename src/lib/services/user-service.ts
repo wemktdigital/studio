@@ -155,10 +155,30 @@ export class UserService {
         return []
       }
       
-      // ✅ SIMPLIFICADO: Por enquanto, retornar array vazio
-      // A tabela workspace_members pode não existir ainda
-      console.log('UserService.getWorkspaceUsers: Returning empty array (workspace_members table may not exist)')
-      return []
+      // ✅ BUSCAR: Usuários do workspace via API
+      console.log('UserService.getWorkspaceUsers: Calling workspace members API...')
+      
+      const response = await fetch(`/api/workspace/${workspaceId}/members`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        console.error('UserService.getWorkspaceUsers: API call failed:', response.status, response.statusText)
+        return []
+      }
+
+      const result = await response.json()
+
+      if (!result.success) {
+        console.error('UserService.getWorkspaceUsers: API returned error:', result.error)
+        return []
+      }
+
+      console.log('UserService.getWorkspaceUsers: Found', result.members?.length || 0, 'members')
+      return result.members || []
       
     } catch (error) {
       console.error('UserService.getWorkspaceUsers: Caught error:', error)

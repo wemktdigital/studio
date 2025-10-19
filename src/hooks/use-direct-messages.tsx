@@ -180,11 +180,11 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
       }
     },
     enabled: !!dmId,
-    staleTime: 5 * 60 * 1000, // 5 minutes - dados ficam frescos por 5 minutos
+    staleTime: 0, // Sempre buscar dados frescos
     retry: 2,
     refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
     refetchOnMount: true, // Refetch quando o componente monta
-    gcTime: 10 * 60 * 1000 // 10 minutes - cache mantido por 10 minutos
+    gcTime: 0 // Sem cache para forçar sempre buscar dados frescos
   })
 
   console.log('🔍 useDMMessages: React Query state:', { messages, isLoading, error, messagesLength: messages?.length })
@@ -269,8 +269,8 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
         dataAiHint: newMessage.data_ai_hint || undefined,
       author: {
         id: newMessage.author_id || 'unknown',
-        displayName: newMessage.author_id ? 'Unknown User' : 'Você',
-        handle: 'unknown',
+        displayName: 'Você', // Mensagem enviada pelo usuário atual
+        handle: 'current_user',
         avatarUrl: '',
         status: 'online' as const
       }
@@ -327,16 +327,16 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
       dataAiHint: msg.data_ai_hint || undefined,
       author: msg.author ? {
         id: msg.author.id,
-        displayName: msg.author.display_name || 'Unknown User',
-        handle: msg.author.handle || 'unknown',
+        displayName: msg.author.display_name || msg.author.username || 'Usuário Desconhecido',
+        handle: msg.author.username || 'unknown',
         avatarUrl: msg.author.avatar_url || '',
-        status: 'online' // TODO: Get real status
+        status: msg.author.status || 'online'
       } : {
         id: msg.author_id || 'unknown',
-        displayName: msg.author_id ? 'Unknown User' : 'Você',
+        displayName: 'Usuário Desconhecido',
         handle: 'unknown',
         avatarUrl: '',
-        status: 'online'
+        status: 'offline'
       }
     }
     

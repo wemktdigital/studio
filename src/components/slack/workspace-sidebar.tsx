@@ -45,7 +45,7 @@ import { CreateChannelDialog } from './create-channel-dialog';
 import { NewDMDialog } from './new-dm-dialog';
 import { ChannelManagement } from './channel-management';
 import { useWorkspaceChannels } from '@/hooks/use-channels';
-import { useWorkspaceUsersAdmin } from '@/hooks/use-workspace-users-admin';
+import { useWorkspaceUsersSimple } from '@/hooks/use-workspace-users-simple';
 import { useUserLevels } from '@/hooks/use-user-levels';
 import { useDirectMessages } from '@/hooks/use-direct-messages';
 import { useUnreadCounts } from '@/hooks/use-unread-counts';
@@ -80,6 +80,7 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
   const [userStatus, setUserStatus] = useState<'active' | 'away'>('active');
   const [isDirectMessagesExpanded, setIsDirectMessagesExpanded] = useState(false);
   const [isChannelsExpanded, setIsChannelsExpanded] = useState(true);
+  const [isPeopleExpanded, setIsPeopleExpanded] = useState(false);
   // ✅ CORRIGIDO: Usar hook useWorkspace para carregar dados reais
   const { workspace, isLoading: isLoadingWorkspace } = useWorkspace(workspaceId);
   const { activeView, setActiveView } = useSidebarContext();
@@ -97,10 +98,17 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
   const { channels = [], isLoading: channelsLoading, error: channelsError } = useWorkspaceChannels(workspaceId);
   
 
-  const { data: users = [], isLoading: usersLoading, error: usersError } = useWorkspaceUsersAdmin(workspaceId);
+  const { users = [], isLoading: usersLoading, error: usersError } = useWorkspaceUsersSimple(workspaceId);
   const { currentUserLevel } = useUserLevels(workspaceId);
   const { directMessages, isLoading: dmsLoading } = useDirectMessages(workspaceId);
   const { getUnreadCount, getTotalUnreadCount } = useUnreadCounts(workspaceId);
+
+  // ✅ DEBUG: Log dos dados dos usuários
+  console.log('🔍 WorkspaceSidebar: users data:', users);
+  console.log('🔍 WorkspaceSidebar: users length:', users.length);
+  console.log('🔍 WorkspaceSidebar: usersLoading:', usersLoading);
+  console.log('🔍 WorkspaceSidebar: usersError:', usersError);
+  console.log('🔍 WorkspaceSidebar: currentUserLevel:', currentUserLevel);
 
   const handleChannelClick = (channelId: string) => {
     // Reset to home view when clicking on a channel
@@ -300,8 +308,8 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
               </div>
             </div>
             
-            {/* Direct Messages List - Always visible for users with conversations */}
-            {directMessages.length > 0 && (
+            {/* Direct Messages List - Only visible when expanded */}
+            {isDirectMessagesExpanded && directMessages.length > 0 && (
               <div className="pl-6 space-y-1 mt-2">
                 {dmsLoading ? (
                   <div className="text-xs text-sidebar-foreground/60 py-2">
@@ -309,12 +317,10 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
                   </div>
                 ) : (
                   <>
-                    {/* Show count only when expanded */}
-                    {isDirectMessagesExpanded && (
-                      <div className="text-xs text-sidebar-foreground/60 py-1">
-                        {directMessages.length} conversa{directMessages.length !== 1 ? 's' : ''} direta{directMessages.length !== 1 ? 's' : ''}
-                      </div>
-                    )}
+                    {/* Show count */}
+                    <div className="text-xs text-sidebar-foreground/60 py-1">
+                      {directMessages.length} conversa{directMessages.length !== 1 ? 's' : ''} direta{directMessages.length !== 1 ? 's' : ''}
+                    </div>
                     {directMessages.map((dm) => {
                       const user = users.find(u => u.id === dm.userId);
                       if (!user) return null;
@@ -356,6 +362,86 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
                 <div className="text-xs text-sidebar-foreground/60 py-2">
                   Nenhuma conversa direta
                 </div>
+              </div>
+            )}
+          </div>
+
+          <Separator className="my-2 bg-sidebar-border" />
+
+          {/* People Section */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setIsPeopleExpanded(!isPeopleExpanded)}
+                className="flex items-center flex-1 hover:bg-sidebar-accent/50 rounded-md px-2 py-1 transition-colors"
+              >
+                <ChevronRight 
+                  className={cn(
+                    "h-4 w-4 mr-1 transition-transform duration-200",
+                    isPeopleExpanded && "rotate-90"
+                  )} 
+                />
+                <Users className="h-4 w-4 mr-3" />
+                <span className="text-sm font-medium text-sidebar-foreground">Pessoas</span>
+              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-sidebar-accent/50"
+                onClick={() => setIsNewDMDialogOpen(true)}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+            
+            {/* Expanded People List */}
+            {isPeopleExpanded && (
+              <div className="pl-6 space-y-1 mt-2">
+                {usersLoading ? (
+                  <div className="text-xs text-sidebar-foreground/60 py-2">
+                    Carregando pessoas...
+                  </div>
+                ) : usersError ? (
+                  <div className="text-xs text-red-400 py-2">
+                    Erro ao carregar pessoas: {usersError?.message || 'Erro desconhecido'}
+                  </div>
+                ) : users.length === 0 ? (
+                  <div className="text-xs text-sidebar-foreground/60 py-2">
+                    Nenhuma pessoa encontrada
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-xs text-sidebar-foreground/60 py-1">
+                      {users.length} pessoa{users.length !== 1 ? 's' : ''} no workspace
+                    </div>
+                    {users.map((user) => {
+                      const isCurrentUser = user.id === currentUserLevel?.id;
+                      
+                      return (
+                        <button
+                          key={user.id}
+                          onClick={() => handleUserClick(user.id)}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-md text-sm transition-all duration-200 ease-in-out",
+                            currentUserId === user.id
+                              ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/50",
+                            isCurrentUser && "opacity-60"
+                          )}
+                          disabled={isCurrentUser}
+                        >
+                          <div className="flex items-center gap-2">
+                            <UserAvatar user={user} className="h-5 w-5" />
+                            <span className="truncate">
+                              {user.displayName}
+                              {isCurrentUser && ' (você)'}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -448,20 +534,6 @@ export default function WorkspaceSidebar({ workspaceId }: WorkspaceSidebarProps)
           </div>
 
           <Separator className="my-2 bg-sidebar-border" />
-
-          {/* People */}
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={cn(
-              "w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              activeView === 'people' && "bg-sidebar-primary text-sidebar-primary-foreground"
-            )}
-            onClick={handlePeopleClick}
-          >
-            <Users className="h-4 w-4 mr-3" />
-            Pessoas
-          </Button>
           
           {/* User Level Manager Button - Only show if user has permission */}
           {currentUserLevel && (currentUserLevel.userLevel === 'super_admin' || currentUserLevel.userLevel === 'admin') && (

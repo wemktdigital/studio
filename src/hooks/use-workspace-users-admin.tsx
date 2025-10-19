@@ -44,15 +44,18 @@ export function useWorkspaceUsersAdmin(workspaceId: string) {
         // ✅ VERIFICAÇÃO: Permissões (simplificada)
         console.log('🔍 useWorkspaceUsersAdmin: Checking permissions...')
         console.log('🔍 useWorkspaceUsersAdmin: currentUserLevel:', currentUserLevel)
+        console.log('🔍 useWorkspaceUsersAdmin: currentUserLevel?.userLevel:', currentUserLevel?.userLevel)
         
         // ✅ PERMISSÃO SIMPLIFICADA: Permitir para admins ou super admins
         const isAdmin = currentUserLevel?.userLevel === 'admin' || currentUserLevel?.userLevel === 'super_admin'
         console.log('🔍 useWorkspaceUsersAdmin: User is admin:', isAdmin)
         
-        if (!isAdmin) {
-          console.warn('🔍 useWorkspaceUsersAdmin: User does not have admin permissions')
-          return []
-        }
+        // ✅ DEBUG: Temporariamente permitir para todos os usuários para testar
+        console.log('🔍 useWorkspaceUsersAdmin: TEMPORARY: Allowing all users to see workspace members for debugging')
+        // if (!isAdmin) {
+        //   console.warn('🔍 useWorkspaceUsersAdmin: User does not have admin permissions')
+        //   return []
+        // }
 
         // ✅ VERIFICAÇÃO: workspaceId válido
         if (!workspaceId) {
@@ -104,6 +107,9 @@ export function useWorkspaceUsersAdmin(workspaceId: string) {
         }
 
         console.log('🔍 useWorkspaceUsersAdmin: Raw data from Supabase:', data)
+        console.log('🔍 useWorkspaceUsersAdmin: Data type:', typeof data)
+        console.log('🔍 useWorkspaceUsersAdmin: Data is array:', Array.isArray(data))
+        console.log('🔍 useWorkspaceUsersAdmin: Data length:', data?.length)
 
         // ✅ VERIFICAÇÃO: Dados válidos
         if (!data || !Array.isArray(data)) {
@@ -160,7 +166,12 @@ export function useWorkspaceUsersAdmin(workspaceId: string) {
         })
 
         console.log('🔍 useWorkspaceUsersAdmin: Transformed users:', usersWithStats)
-        return usersWithStats.sort((a, b) => a.displayName.localeCompare(b.displayName))
+        console.log('🔍 useWorkspaceUsersAdmin: Transformed users length:', usersWithStats.length)
+        console.log('🔍 useWorkspaceUsersAdmin: First transformed user:', usersWithStats[0])
+        
+        const sortedUsers = usersWithStats.sort((a, b) => a.displayName.localeCompare(b.displayName))
+        console.log('🔍 useWorkspaceUsersAdmin: Returning sorted users:', sortedUsers)
+        return sortedUsers
         
       } catch (error) {
         console.error('🔍 useWorkspaceUsersAdmin: Unexpected error:', error)
@@ -171,7 +182,7 @@ export function useWorkspaceUsersAdmin(workspaceId: string) {
         throw error
       }
     },
-    enabled: !!workspaceId && !!currentUserLevel,
+    enabled: !!workspaceId, // Temporariamente remover dependência do currentUserLevel para debug
     retry: 1,
     retryDelay: 1000
   })

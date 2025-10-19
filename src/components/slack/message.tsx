@@ -86,11 +86,27 @@ export default function MessageItem({
     isLoading: isReactionLoading 
   } = useReactions(message.id);
 
-  // ✅ MEMOIZADO: Encontrar o author pelos dados dos usuários
+  // ✅ MEMOIZADO: Usar dados do autor diretamente da mensagem
   const author = useMemo(() => {
+    console.log('🔍 MessageItem: Checking author data:', {
+      messageId: message.id,
+      messageAuthor: message.author,
+      messageAuthorId: message.authorId,
+      usersLength: users.length,
+      users: users.map(u => ({ id: u.id, displayName: u.displayName }))
+    })
+    
+    // Se a mensagem já tem dados do autor, usar diretamente
+    if (message.author) {
+      console.log('🔍 MessageItem: Using message.author:', message.author)
+      return message.author
+    }
+    
+    // Fallback: tentar encontrar nos usuários passados
     const foundAuthor = users.find(u => u.id === message.authorId)
+    console.log('🔍 MessageItem: Found author in users:', foundAuthor)
     return foundAuthor
-  }, [users, message.authorId]);
+  }, [message.author, users, message.authorId]);
   
   // ✅ VERIFICAR: Se o author foi encontrado, criar um autor padrão
   const displayAuthor = author || {
@@ -100,6 +116,8 @@ export default function MessageItem({
     avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
     status: 'offline' as const
   }
+  
+  console.log('🔍 MessageItem: Final displayAuthor:', displayAuthor)
 
   // ✅ MEMOIZADO: Timestamp para evitar recálculos
   const timestamp = useMemo(() => {

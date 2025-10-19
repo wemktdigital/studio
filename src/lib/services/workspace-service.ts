@@ -55,8 +55,7 @@ export class WorkspaceService {
         .select('id')
         .eq('workspace_id', workspaceId)
         .eq('user_id', user.id)
-        .eq('status', 'active')
-        .single()
+        .maybeSingle()
 
       if (error) {
         console.error('WorkspaceService: Error checking workspace access:', error)
@@ -133,10 +132,15 @@ export class WorkspaceService {
             )
           `)
           .eq('user_id', user.id)
-          .eq('status', 'active')
 
         if (memberError) {
-          console.error('WorkspaceService: Error fetching user workspaces:', memberError)
+          // ✅ Não logar erro se for apenas porque o usuário não tem workspaces
+          // Alguns erros do Supabase retornam {} quando não há resultados
+          if (Object.keys(memberError).length > 0 && memberError.message) {
+            console.error('WorkspaceService: Error fetching user workspaces:', memberError)
+          } else {
+            console.log('WorkspaceService: User has no workspace memberships yet')
+          }
           return []
         }
 

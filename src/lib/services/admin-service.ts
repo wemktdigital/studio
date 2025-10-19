@@ -133,12 +133,11 @@ class AdminService {
       const usersWithWorkspaces = await Promise.all(
         (users || []).map(async (user) => {
           const { data: workspaceLinks } = await supabase
-            .from('workspace_users')
+            .from('workspace_members')
             .select(`
               workspace_id,
               role,
               joined_at,
-              is_active,
               workspaces (
                 name
               )
@@ -150,7 +149,7 @@ class AdminService {
             workspace_name: link.workspaces?.name || 'Unknown',
             role: link.role,
             joined_at: link.joined_at,
-            is_active: link.is_active
+            is_active: true // Sempre ativo por padrão
           }))
 
           return {
@@ -174,56 +173,58 @@ class AdminService {
     await this.requireSuperAdmin()
 
     try {
-      const supabase = createClient()
+      console.log('🔧 AdminService: Enviando requisição para API route...')
 
-      // 1. Criar usuário no Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            display_name: userData.display_name
-          },
-          emailRedirectTo: undefined // Não enviar email de confirmação
-        }
+      // Usar API route para criar usuário (funciona no servidor com Service Role Key)
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
+          display_name: userData.display_name,
+          user_level: userData.user_level || 'member'
+        })
       })
 
-      if (authError) throw authError
-      if (!authData.user) throw new Error('Falha ao criar usuário')
+      const result = await response.json()
 
-      // 2. Atualizar nível do usuário (se fornecido)
-      if (userData.user_level) {
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ 
-            user_level: userData.user_level,
-            display_name: userData.display_name
-          })
-          .eq('id', authData.user.id)
-
-        if (updateError) {
-          console.error('Error updating user level:', updateError)
+      if (!response.ok) {
+        // Verificar se é erro de usuário já existente
+        if (result.code === 'USER_EXISTS') {
+          throw new Error(`Usuário com email ${result.existingUser?.email || 'este email'} já existe no sistema`)
         }
+        throw new Error(result.error || 'Erro desconhecido na API')
       }
 
-      // 3. Buscar usuário completo
-      const { data: user, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single()
-
-      if (userError) throw userError
-
-      console.log('✅ Usuário criado manualmente:', user.email)
-
-      return {
-        ...user,
-        workspaces: []
+      if (!result.success) {
+        throw new Error(result.error || 'Falha ao criar usuário')
       }
-    } catch (error) {
+
+      console.log('✅ Usuário criado com sucesso via API route:', result.user.display_name)
+      if (result.message) {
+        console.log('📝 Mensagem:', result.message)
+      }
+
+      return result.user
+
+    } catch (error: any) {
       console.error('Error creating user manually:', error)
-      throw error
+      
+      // ✅ MELHOR TRATAMENTO DE ERRO: Log detalhado
+      if (error.message) {
+        console.error('Error message:', error.message)
+      }
+      if (error.details) {
+        console.error('Error details:', error.details)
+      }
+      if (error.hint) {
+        console.error('Error hint:', error.hint)
+      }
+      
+      throw new Error(`Falha ao criar usuário: ${error.message || 'Erro desconhecido'}`)
     }
   }
 
@@ -251,32 +252,31 @@ class AdminService {
   }
 
   /**
-   * Deleta um usuário do sistema
+   * Deleta um usuário do sistema (exclusão completa)
    */
   async deleteUser(userId: string): Promise<void> {
     await this.requireSuperAdmin()
 
     try {
-      const supabase = createClient()
+      // Usar API route para exclusão completa (auth.users + public.users)
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId })
+      })
 
-      // 1. Remover de todos os workspaces
-      await supabase
-        .from('workspace_users')
-        .delete()
-        .eq('user_id', userId)
+      const result = await response.json()
 
-      // 2. Deletar usuário
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId)
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao excluir usuário')
+      }
 
-      if (error) throw error
-
-      console.log('✅ Usuário deletado:', userId)
-    } catch (error) {
+      console.log('✅ Usuário excluído completamente:', userId)
+    } catch (error: any) {
       console.error('Error deleting user:', error)
-      throw error
+      throw new Error(`Falha ao excluir usuário: ${error.message || 'Erro desconhecido'}`)
     }
   }
 
@@ -305,7 +305,7 @@ class AdminService {
         (workspaces || []).map(async (workspace) => {
           // Contar membros
           const { count: membersCount } = await supabase
-            .from('workspace_users')
+            .from('workspace_members')
             .select('*', { count: 'exact', head: true })
             .eq('workspace_id', workspace.id)
 
@@ -345,11 +345,11 @@ class AdminService {
 
       // Verificar se já existe vínculo
       const { data: existing } = await supabase
-        .from('workspace_users')
+        .from('workspace_members')
         .select('*')
         .eq('user_id', data.user_id)
         .eq('workspace_id', data.workspace_id)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         throw new Error('Usuário já está vinculado a este workspace')
@@ -357,13 +357,11 @@ class AdminService {
 
       // Criar vínculo
       const { error } = await supabase
-        .from('workspace_users')
+        .from('workspace_members')
         .insert({
           user_id: data.user_id,
           workspace_id: data.workspace_id,
-          role: data.role,
-          joined_at: new Date().toISOString(),
-          is_active: true
+          role: data.role
         })
 
       if (error) throw error
@@ -385,7 +383,7 @@ class AdminService {
       const supabase = createClient()
 
       const { error } = await supabase
-        .from('workspace_users')
+        .from('workspace_members')
         .delete()
         .eq('user_id', userId)
         .eq('workspace_id', workspaceId)
@@ -413,7 +411,7 @@ class AdminService {
       const supabase = createClient()
 
       const { error } = await supabase
-        .from('workspace_users')
+        .from('workspace_members')
         .update({ role: newRole })
         .eq('user_id', userId)
         .eq('workspace_id', workspaceId)
@@ -437,12 +435,11 @@ class AdminService {
       const supabase = createClient()
 
       const { data, error } = await supabase
-        .from('workspace_users')
+        .from('workspace_members')
         .select(`
           user_id,
           role,
           joined_at,
-          is_active,
           users (
             id,
             email,
@@ -465,7 +462,7 @@ class AdminService {
           workspace_name: '',
           role: link.role,
           joined_at: link.joined_at,
-          is_active: link.is_active
+          is_active: true // Sempre ativo por padrão
         }]
       }))
 

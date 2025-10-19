@@ -38,13 +38,14 @@ export function isMockUserEnabled(): boolean {
 }
 
 // ✅ FUNÇÃO: Criar cliente Supabase com tratamento de SSR
-export function createClient() {
+export function createClient(useServiceRole: boolean = false) {
   // ✅ SSR CHECK: Criar cliente mesmo no servidor para build
   if (typeof window === 'undefined') {
     console.log('createClient: SSR detected, creating server client')
+    const key = useServiceRole ? process.env.SUPABASE_SERVICE_ROLE_KEY! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     return createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      key
     )
   }
   
@@ -53,6 +54,16 @@ export function createClient() {
   console.log('createClient: NEXT_PUBLIC_SUPABASE_ANON_KEY exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   console.log('createClient: Mock user enabled:', isMockUserEnabled())
   
+  // Para Service Role, sempre criar um novo cliente
+  if (useServiceRole) {
+    console.log('createClient: Creating Service Role client')
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    return createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      key
+    )
+  }
+
   if (!supabase) {
     try {
       console.log('createClient: Creating new Supabase client')

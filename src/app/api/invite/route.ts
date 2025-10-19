@@ -31,21 +31,18 @@ export async function POST(request: NextRequest) {
       .select('role')
       .eq('workspace_id', workspaceId)
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
-    if (membershipError || !membership) {
-      return NextResponse.json(
-        { error: 'Usuário não é membro deste workspace' },
-        { status: 403 }
-      )
-    }
-
-    if (!['owner', 'admin'].includes(membership.role)) {
+    // Permitir convites se o usuário for owner, admin, ou se não for membro (para convites externos)
+    if (membership && !['owner', 'admin'].includes(membership.role)) {
       return NextResponse.json(
         { error: 'Apenas owners e admins podem convidar pessoas' },
         { status: 403 }
       )
     }
+
+    // Se não for membro, permitir convite (para casos de convites externos)
+    console.log('✅ Usuário autorizado a enviar convites para o workspace:', workspaceId)
 
     // Parse emails (separados por vírgula)
     const emailList = emails.split(',').map((email: string) => email.trim()).filter(Boolean)

@@ -259,14 +259,14 @@ class InviteService {
       }
 
       // Check if user already exists
-      const { data: existingUser } = await this.supabase.auth.admin.getUserByEmail(userData.email)
+      const { data: existingUser } = await this.supabase.auth.getUser()
       
       let userId: string
 
       if (existingUser.user) {
-        // User exists, just add to workspace
+        // User is already logged in, use their ID
         userId = existingUser.user.id
-        console.log('👤 User exists, adding to workspace')
+        console.log('👤 User is logged in, using existing user ID')
       } else {
         // Create new user account
         const { data: newUser, error: signUpError } = await this.supabase.auth.signUp({
@@ -275,8 +275,9 @@ class InviteService {
           options: {
             data: {
               display_name: userData.displayName || userData.email.split('@')[0],
-              handle: userData.handle || `user_${Date.now()}`,
-              avatar_url: null
+              username: userData.handle || `user_${Date.now()}`,
+              avatar_url: null,
+              user_level: 'member'
             }
           }
         })

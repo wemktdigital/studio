@@ -212,7 +212,7 @@ export async function sendInviteEmail(data: InviteEmailData): Promise<{ success:
     }
 
     const { data: emailData, error } = await resend.emails.send({
-      from: 'Studio <noreply@we.marketing>',
+      from: 'Studio <onboarding@resend.dev>',
       to: [data.to],
       subject: `Convite para o workspace ${data.workspaceName}`,
       html: createInviteEmailHTML(data),

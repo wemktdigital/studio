@@ -122,7 +122,7 @@ export class MessageService {
       console.log('MessageService: Checking if DM exists in database with ID:', realDmId)
       
       // ✅ CORRIGIDO: Buscar mensagens que NÃO estão em threads
-      // Primeiro buscar todas as mensagens do DM
+      // Primeiro buscar todas as mensagens do DM (sem JOIN para evitar problemas)
       const { data: allMessages, error: allMessagesError } = await this.supabase
         .from('messages')
         .select('*')
@@ -149,6 +149,23 @@ export class MessageService {
       }
 
       console.log('MessageService: Found', allMessages.length, 'DM messages')
+
+      // ✅ ADICIONADO: Buscar dados dos usuários separadamente
+      const userIds = [...new Set(allMessages.map(msg => msg.author_id))]
+      let usersData = []
+      
+      if (userIds.length > 0) {
+        const { data: users, error: usersError } = await this.supabase
+          .from('users')
+          .select('id, display_name, username, avatar_url, status')
+          .in('id', userIds)
+        
+        if (usersError) {
+          console.error('Error fetching users for DM messages:', usersError)
+        } else {
+          usersData = users || []
+        }
+      }
 
       // ✅ CORRIGIDO: Buscar IDs das mensagens que estão em threads
       const messageIds = allMessages.map(msg => msg.id)
@@ -210,23 +227,51 @@ export class MessageService {
         // ✅ ORDENAR: Por timestamp de criação
         uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         
-        // ✅ TRANSFORMAR: Converter snake_case para camelCase
-        const transformedMessages = uniqueMessages.map(msg => ({
-          id: msg.id,
-          content: msg.content,
-          type: msg.type,
-          authorId: msg.author_id, // ✅ CORRIGIDO: snake_case para camelCase
-          channelId: msg.channel_id,
-          dmId: msg.dm_id,
-          createdAt: msg.created_at,
-          updatedAt: msg.updated_at,
-          attachmentName: msg.attachment_name,
-          attachmentUrl: msg.attachment_url,
-          dataAiHint: msg.data_ai_hint,
-          reactions: [] // Inicializar array vazio
-        }))
+        // ✅ TRANSFORMAR: Converter snake_case para camelCase E incluir dados do autor
+        const transformedMessages = uniqueMessages.map(msg => {
+          // Buscar dados do autor
+          const author = usersData.find(u => u.id === msg.author_id)
+          
+          if (!author) {
+            console.warn('MessageService: Author not found for message:', msg.id, 'author_id:', msg.author_id)
+            console.warn('MessageService: Available users:', usersData.map(u => ({ id: u.id, display_name: u.display_name })))
+          }
+          
+          const authorData = author || {
+            id: msg.author_id,
+            display_name: 'Usuário Desconhecido',
+            username: `user_${msg.author_id?.slice(0, 8) || 'unknown'}`,
+            avatar_url: null,
+            status: 'offline'
+          }
+
+          return {
+            id: msg.id,
+            content: msg.content,
+            type: msg.type,
+            authorId: msg.author_id, // ✅ CORRIGIDO: snake_case para camelCase
+            channelId: msg.channel_id,
+            dmId: msg.dm_id,
+            createdAt: msg.created_at,
+            updatedAt: msg.updated_at,
+            attachmentName: msg.attachment_name,
+            attachmentUrl: msg.attachment_url,
+            dataAiHint: msg.data_ai_hint,
+            reactions: [], // Inicializar array vazio
+            // ✅ ADICIONADO: Dados do autor
+            author: {
+              id: authorData.id,
+              display_name: authorData.display_name,
+              username: authorData.username,
+              avatar_url: authorData.avatar_url,
+              status: authorData.status
+            }
+          }
+        })
         
         console.log('MessageService: Returning DM messages - Base:', data.length, 'Unique:', uniqueMessages.length, 'Transformed:', transformedMessages.length)
+        console.log('MessageService: Users data found:', usersData.length, 'users')
+        console.log('MessageService: Sample transformed message:', transformedMessages[0])
         console.log('MessageService: Transformed messages:', transformedMessages)
         return transformedMessages
       }
