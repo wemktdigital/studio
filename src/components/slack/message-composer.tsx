@@ -129,10 +129,7 @@ export default function MessageComposer({ conversation, channelId, workspaceId }
       setShowSuggestions(false);
       setShowMentions(false);
       
-      toast({
-        title: 'Message sent',
-        description: 'Your message has been sent successfully!',
-      });
+      // Toast removido - usuário vê a mensagem aparecer diretamente na tela
     } catch (error) {
       console.error('Failed to send message:', error);
       toast({

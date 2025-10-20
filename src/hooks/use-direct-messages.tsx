@@ -327,8 +327,8 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
       dataAiHint: msg.data_ai_hint || undefined,
       author: msg.author ? {
         id: msg.author.id,
-        displayName: msg.author.display_name || msg.author.username || 'Usuário Desconhecido',
-        handle: msg.author.username || 'unknown',
+        displayName: msg.author.display_name || msg.author.username || msg.author.handle || 'Usuário Desconhecido',
+        handle: msg.author.handle || msg.author.username || 'unknown',
         avatarUrl: msg.author.avatar_url || '',
         status: msg.author.status || 'online'
       } : {

@@ -91,10 +91,7 @@ export function useDMMessagesSimple(dmId: string, workspaceId?: string) {
         return [...oldData, newMessage]
       })
       
-      toast({
-        title: 'Mensagem enviada',
-        description: 'Sua mensagem foi enviada com sucesso!',
-      })
+      // Toast removido - usuário vê a mensagem aparecer diretamente na tela
     },
     onError: (error: any) => {
       console.error('🚨🚨🚨 useDMMessagesSimple: ERROR SENDING DM VIA MESSAGESERVICE! 🚨🚨🚨', error)

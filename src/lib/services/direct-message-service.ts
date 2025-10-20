@@ -174,7 +174,9 @@ export class DirectMessageService {
             id,
             display_name,
             username,
-            avatar_url
+            handle,
+            avatar_url,
+            status
           )
         `)
         .eq('dm_id', dmId)

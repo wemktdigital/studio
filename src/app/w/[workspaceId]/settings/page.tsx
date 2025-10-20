@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { messageRetentionService } from '@/lib/services/message-retention-service'
+import { useWorkspaceUsersAdmin } from '@/hooks/use-workspace-users-admin'
 
 export default function WorkspaceSettingsPage() {
   const params = useParams()
@@ -83,26 +84,20 @@ export default function WorkspaceSettingsPage() {
     loadRetentionStats()
   }, [workspaceId, settings.retentionDays])
 
-  const [members, setMembers] = useState([
-    {
-      id: '1',
-      name: 'Dev User',
-      email: 'dev@example.com',
-      role: 'admin',
-      status: 'active',
-      joinedAt: '2024-01-15'
-    },
-    {
-      id: '2', 
-      name: 'João Silva',
-      email: 'joao@example.com',
-      role: 'member',
-      status: 'active',
-      joinedAt: '2024-02-20'
-    }
-  ])
+  // Usar dados reais do workspace em vez de dados dummy
+  const { workspaceUsers, isLoading: isLoadingMembers } = useWorkspaceUsersAdmin(workspaceId)
 
   const [isLoading, setIsLoading] = useState(false)
+  
+  // Converter dados do hook para o formato esperado pela UI
+  const members = workspaceUsers.map(user => ({
+    id: user.id,
+    name: user.displayName,
+    email: user.email || 'N/A',
+    role: user.userLevel === 'super_admin' ? 'admin' : user.userLevel,
+    status: user.status === 'online' ? 'active' : 'inactive',
+    joinedAt: user.joinedAt
+  }))
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false)
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<any>(null)
@@ -288,19 +283,7 @@ export default function WorkspaceSettingsPage() {
         throw new Error(result.error || 'Erro ao enviar convite')
       }
 
-      // Adicionar membro à lista local
-      const member = {
-        id: Date.now().toString(),
-        name: newMember.name,
-        email: newMember.email,
-        role: newMember.role,
-        status: 'pending', // Status pendente até aceitar o convite
-        joinedAt: null,
-        inviteToken: result.data?.invite?.token,
-        inviteSentAt: new Date().toISOString()
-      }
-      
-      setMembers([...members, member])
+      // Não precisamos mais manipular estado local - os dados vêm do hook
       setNewMember({ name: '', email: '', role: 'member' })
       setIsAddMemberDialogOpen(false)
       
@@ -349,12 +332,7 @@ export default function WorkspaceSettingsPage() {
         throw new Error(result.error || 'Erro ao reenviar convite')
       }
 
-      // Atualizar o membro com novo token
-      setMembers(members.map(member => 
-        member.email === email 
-          ? { ...member, inviteToken: result.data?.invite?.token, inviteSentAt: new Date().toISOString() }
-          : member
-      ))
+      // Não precisamos mais manipular estado local - os dados vêm do hook
       
       console.log('✅ Convite reenviado:', { email, inviteToken: result.data?.invite?.token })
       
@@ -483,11 +461,7 @@ export default function WorkspaceSettingsPage() {
       // Simular aprovação manual
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      setMembers(members.map(member => 
-        member.id === memberId 
-          ? { ...member, status: 'active', joinedAt: new Date().toISOString().split('T')[0] }
-          : member
-      ))
+      // Não precisamos mais manipular estado local - os dados vêm do hook
       
       toast({
         title: "Membro aprovado!",
@@ -551,11 +525,7 @@ export default function WorkspaceSettingsPage() {
       // Simular alteração de status
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      setMembers(members.map(member => 
-        member.id === memberId 
-          ? { ...member, status: newStatus }
-          : member
-      ))
+      // Não precisamos mais manipular estado local - os dados vêm do hook
       
       toast({
         title: `Membro ${action}do!`,
@@ -582,7 +552,7 @@ export default function WorkspaceSettingsPage() {
       // Simular remoção de membro
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      setMembers(members.filter(member => member.id !== memberId))
+      // Não precisamos mais manipular estado local - os dados vêm do hook
       
       toast({
         title: "Membro removido",
@@ -897,6 +867,10 @@ export default function WorkspaceSettingsPage() {
                         <UserPlus className="h-4 w-4" />
                         Adicionar Primeiro Membro
                       </Button>
+                    </div>
+                  ) : isLoadingMembers ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
                   ) : (
                     members.map((member) => (

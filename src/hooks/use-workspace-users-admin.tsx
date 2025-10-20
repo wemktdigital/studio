@@ -154,7 +154,7 @@ export function useWorkspaceUsersAdmin(workspaceId: string) {
           
           return {
             id: user.id,
-            handle: user.display_name?.toLowerCase().replace(/\s+/g, '') || `user_${user.id.slice(0, 8)}`,
+            handle: (user.display_name || 'unknown').toLowerCase().replace(/\s+/g, '') || `user_${user.id.slice(0, 8)}`,
             displayName: user.display_name || 'Unknown User',
             email: '', // Email not available in users table
             avatarUrl: user.avatar_url,
