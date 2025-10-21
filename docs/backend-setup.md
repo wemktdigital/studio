@@ -5,8 +5,8 @@
 1. **Criar projeto no Supabase**
 2. **Configurar variáveis de ambiente**:
    ```bash
-   NEXT_PUBLIC_SUPABASE_URL=sua_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima
+   NEXT_PUBLIC_SUPABASE_URL=https://ghmawevdsghvvzliibzv.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdobWF3cnZkc2dodnZ6bGlpYnp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUzMDc3NzEsImV4cCI6MjA3MDg4Mzc3MX0.fmar501flcc0cHnU6UOsWRsn7-daQ_cwDmQ1cqOmM6A
    SUPABASE_SERVICE_ROLE_KEY=sua_chave_servico
    ```
 3. **Executar schema SQL** do arquivo `supabase-schema.sql`
