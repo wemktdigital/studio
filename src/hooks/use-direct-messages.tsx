@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthContext } from '@/components/providers/auth-provider'
 import { useUnreadCounts } from '@/hooks/use-unread-counts'
 import { toast } from '@/hooks/use-toast'
+import { messageService } from '@/lib/services/message-service'
 
 export function useDirectMessages(workspaceId: string) {
   const { user } = useAuthContext()
@@ -231,6 +232,70 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
     }
   }, [messages.length, user?.id, dmId])
 
+  // Real-time subscription for DMs
+  useEffect(() => {
+    if (!dmId) return
+    if (!user) {
+      console.log('🔔 useDMMessages: User not authenticated, skipping DM subscription')
+      return
+    }
+
+    console.log('🔔 useDMMessages: Setting up DM subscription for', dmId)
+    console.log('🔔 useDMMessages: User authenticated:', !!user)
+    console.log('🔔 useDMMessages: User ID:', user?.id)
+
+    let subscription: any = null
+
+    const setupSubscription = async () => {
+      try {
+        subscription = await messageService.subscribeToDMMessages(dmId, (newMessage) => {
+          console.log('🚨🚨🚨 useDMMessages: REAL-TIME DM MESSAGE RECEIVED! 🚨🚨🚨', {
+            messageId: newMessage.id,
+            content: newMessage.content,
+            timestamp: new Date().toISOString()
+          });
+
+          // Update cache
+          queryClient.setQueryData(['dm-messages', dmId], (oldData: any) => {
+            if (!oldData) return [newMessage]
+
+            // Check if message already exists
+            const exists = oldData.some((msg: any) => msg.id === newMessage.id)
+            if (exists) {
+              console.log('🔔 useDMMessages: Message already exists in cache, skipping duplicate')
+              return oldData
+            }
+
+            // ✅ ADICIONADO: Remover duplicatas antes de adicionar nova mensagem
+            const uniqueOldData = oldData.filter((msg: any, index: number, self: any[]) =>
+              index === self.findIndex(m => m.id === msg.id)
+            )
+
+            console.log('🔔 useDMMessages: Updated cache for DM', dmId)
+            return [...uniqueOldData, newMessage]
+          })
+        })
+      } catch (error) {
+        console.error('🔔 useDMMessages: Error setting up DM subscription:', error)
+      }
+    }
+
+    setupSubscription()
+
+    return () => {
+      console.log('🔔 useDMMessages: Cleaning up DM subscription for', dmId)
+      try {
+        if (subscription && typeof subscription.unsubscribe === 'function') {
+          subscription.unsubscribe()
+        } else {
+          console.log('🔔 useDMMessages: DM Subscription unsubscribe method not available')
+        }
+      } catch (error) {
+        console.error('🔔 useDMMessages: Error unsubscribing from DM', dmId, error)
+      }
+    }
+  }, [dmId, queryClient, user])
+
   // Send message to direct message conversation
   const sendMessage = useMutation({
     mutationFn: async ({ content }: { content: string }) => {
@@ -269,9 +334,9 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
         dataAiHint: newMessage.data_ai_hint || undefined,
       author: {
         id: newMessage.author_id || 'unknown',
-        displayName: 'Você', // Mensagem enviada pelo usuário atual
-        handle: 'current_user',
-        avatarUrl: '',
+        displayName: user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Você',
+        handle: user?.user_metadata?.handle || user?.email?.split('@')[0] || 'usuario',
+        avatarUrl: user?.user_metadata?.avatar_url || '',
         status: 'online' as const
       }
       }
@@ -327,14 +392,14 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
       dataAiHint: msg.data_ai_hint || undefined,
       author: msg.author ? {
         id: msg.author.id,
-        displayName: msg.author.display_name || msg.author.username || msg.author.handle || 'Usuário Desconhecido',
+        displayName: msg.author.display_name || msg.author.username || 'Usuário Desconhecido',
         handle: msg.author.handle || msg.author.username || 'unknown',
         avatarUrl: msg.author.avatar_url || '',
         status: msg.author.status || 'online'
       } : {
         id: msg.author_id || 'unknown',
-        displayName: 'Usuário Desconhecido',
-        handle: 'unknown',
+        displayName: msg.author_id ? `Usuário ${msg.author_id.slice(0, 8)}` : 'Usuário Desconhecido',
+        handle: msg.author_id ? `user_${msg.author_id.slice(0, 8)}` : 'unknown',
         avatarUrl: '',
         status: 'offline'
       }

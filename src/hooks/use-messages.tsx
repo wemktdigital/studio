@@ -56,36 +56,52 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
   // Real-time subscription
   useEffect(() => {
     if (!channelId || channelId === 'test-channel') return // ✅ IGNORAR: channelId de teste
+    if (!user) {
+      console.log('🔔 useChannelMessages: User not authenticated, skipping subscription')
+      return
+    }
 
     console.log('🔔 useChannelMessages: Setting up subscription for channel', channelId)
+    console.log('🔔 useChannelMessages: User authenticated:', !!user)
+    console.log('🔔 useChannelMessages: User ID:', user?.id)
     
-    const subscription = messageService.subscribeToChannelMessages(channelId, (newMessage) => {
-      console.log('🚨🚨🚨 useChannelMessages: REAL-TIME MESSAGE RECEIVED! 🚨🚨🚨', { 
-        messageId: newMessage.id, 
-        content: newMessage.content,
-        timestamp: new Date().toISOString()
-      });
-      
-      // Update cache
-      queryClient.setQueryData(['channel-messages', channelId, workspaceId], (oldData: any) => {
-        if (!oldData) return [newMessage]
-        
-        // Check if message already exists
-        const exists = oldData.some((msg: any) => msg.id === newMessage.id)
-        if (exists) {
-          console.log('🔔 useChannelMessages: Message already exists in cache, skipping duplicate')
-          return oldData
-        }
-        
-        // ✅ ADICIONADO: Remover duplicatas antes de adicionar nova mensagem
-        const uniqueOldData = oldData.filter((msg: any, index: number, self: any[]) => 
-          index === self.findIndex(m => m.id === msg.id)
-        )
-        
-        console.log('🔔 useChannelMessages: Updated cache for channel', channelId)
-        return [...uniqueOldData, newMessage]
-      })
-    })
+    let subscription: any = null
+    
+    const setupSubscription = async () => {
+      try {
+        subscription = await messageService.subscribeToChannelMessages(channelId, (newMessage) => {
+          console.log('🚨🚨🚨 useChannelMessages: REAL-TIME MESSAGE RECEIVED! 🚨🚨🚨', { 
+            messageId: newMessage.id, 
+            content: newMessage.content,
+            timestamp: new Date().toISOString()
+          });
+          
+          // Update cache
+          queryClient.setQueryData(['channel-messages', channelId, workspaceId], (oldData: any) => {
+            if (!oldData) return [newMessage]
+            
+            // Check if message already exists
+            const exists = oldData.some((msg: any) => msg.id === newMessage.id)
+            if (exists) {
+              console.log('🔔 useChannelMessages: Message already exists in cache, skipping duplicate')
+              return oldData
+            }
+            
+            // ✅ ADICIONADO: Remover duplicatas antes de adicionar nova mensagem
+            const uniqueOldData = oldData.filter((msg: any, index: number, self: any[]) => 
+              index === self.findIndex(m => m.id === msg.id)
+            )
+            
+            console.log('🔔 useChannelMessages: Updated cache for channel', channelId)
+            return [...uniqueOldData, newMessage]
+          })
+        })
+      } catch (error) {
+        console.error('🔔 useChannelMessages: Error setting up subscription:', error)
+      }
+    }
+    
+    setupSubscription()
 
     return () => {
       console.log('🔔 useChannelMessages: Cleaning up subscription for channel', channelId)
@@ -99,7 +115,7 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
         console.error('🔔 useChannelMessages: Error unsubscribing from channel', channelId, error)
       }
     }
-  }, [channelId, queryClient, processNewMention])
+  }, [channelId, queryClient, processNewMention, user])
 
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {

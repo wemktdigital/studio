@@ -227,20 +227,35 @@ export class MessageService {
         // ✅ ORDENAR: Por timestamp de criação
         uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
         
+        // ✅ BUSCAR: Dados dos usuários que enviaram mensagens
+        const authorIds = [...new Set(uniqueMessages.map(msg => msg.author_id))]
+        console.log('MessageService: Fetching user data for authors:', authorIds)
+        
+        const { data: usersData, error: usersError } = await this.supabase
+          .from('users')
+          .select('id, display_name, username, handle, avatar_url, status')
+          .in('id', authorIds)
+        
+        if (usersError) {
+          console.error('MessageService: Error fetching users:', usersError)
+        }
+        
+        console.log('MessageService: Found users:', usersData?.length || 0, 'users')
+        
         // ✅ TRANSFORMAR: Converter snake_case para camelCase E incluir dados do autor
         const transformedMessages = uniqueMessages.map(msg => {
           // Buscar dados do autor
-          const author = usersData.find(u => u.id === msg.author_id)
+          const author = usersData?.find(u => u.id === msg.author_id)
           
           if (!author) {
             console.warn('MessageService: Author not found for message:', msg.id, 'author_id:', msg.author_id)
-            console.warn('MessageService: Available users:', usersData.map(u => ({ id: u.id, display_name: u.display_name })))
+            console.warn('MessageService: Available users:', usersData?.map(u => ({ id: u.id, display_name: u.display_name })) || [])
           }
           
           const authorData = author || {
             id: msg.author_id,
-            display_name: 'Usuário Desconhecido',
-            username: `user_${msg.author_id?.slice(0, 8) || 'unknown'}`,
+            display_name: msg.author_id ? `Usuário ${msg.author_id.slice(0, 8)}` : 'Usuário Desconhecido',
+            username: msg.author_id ? `user_${msg.author_id.slice(0, 8)}` : 'unknown',
             avatar_url: null,
             status: 'offline'
           }
@@ -673,13 +688,41 @@ export class MessageService {
   /**
    * Subscribe to real-time message updates for a specific channel
    */
-  subscribeToChannelMessages(channelId: string, callback: (message: Message) => void) {
+  async subscribeToChannelMessages(channelId: string, callback: (message: Message) => void) {
     console.log('🚨🚨🚨 MessageService: SUBSCRIBING TO CHANNEL! 🚨🚨🚨', { 
       channelId, 
       timestamp: new Date().toISOString() 
     });
     
     try {
+      // ✅ VERIFICAÇÃO: Verificar se o cliente Supabase está disponível
+      if (!this.supabase) {
+        console.error('🚨🚨🚨 MessageService: Supabase client is null!')
+        return this.createFallbackSubscription(channelId, callback)
+      }
+      
+      // ✅ VERIFICAÇÃO: Verificar se estamos no cliente (não SSR)
+      if (typeof window === 'undefined') {
+        console.log('🚨🚨🚨 MessageService: SSR detected, skipping subscription')
+        return this.createFallbackSubscription(channelId, callback)
+      }
+      
+      // ✅ VERIFICAÇÃO: Verificar se o usuário está autenticado
+      const { data: { session }, error: sessionError } = await this.supabase.auth.getSession()
+      if (sessionError) {
+        console.error('🚨🚨🚨 MessageService: Error getting session:', sessionError)
+        return this.createFallbackSubscription(channelId, callback)
+      }
+      
+      if (!session) {
+        console.log('🚨🚨🚨 MessageService: User not authenticated, skipping subscription')
+        return this.createFallbackSubscription(channelId, callback)
+      }
+      
+      console.log('🚨🚨🚨 MessageService: User authenticated, creating subscription for channel:', channelId)
+      console.log('🚨🚨🚨 MessageService: Session user ID:', session.user.id)
+      
+      // ✅ TENTATIVA: Criar subscription com timeout
       const channel = this.supabase.channel(`channel:${channelId}`)
       
       const subscription = channel
@@ -707,6 +750,20 @@ export class MessageService {
             status,
             timestamp: new Date().toISOString()
           });
+          
+          // ✅ DEBUG: Verificar se subscription foi criada com sucesso
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ MessageService: Subscription criada com sucesso!')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.log('🔄 MessageService: Subscription falhou, usando fallback com polling')
+            // ✅ FALLBACK: Se subscription falhar, usar polling
+            return this.createFallbackSubscription(channelId, callback)
+          } else if (status === 'TIMED_OUT') {
+            console.log('⏰ MessageService: Timeout na subscription, usando fallback com polling')
+            return this.createFallbackSubscription(channelId, callback)
+          } else if (status === 'CLOSED') {
+            console.log('🔒 MessageService: Subscription fechada!')
+          }
         })
       
       console.log('🚨🚨🚨 MessageService: SUBSCRIPTION CREATED! 🚨🚨🚨', { 
@@ -719,20 +776,339 @@ export class MessageService {
         return subscription
       } else {
         console.log('🚨🚨🚨 MessageService: Subscription created but unsubscribe method not available')
-        // ✅ FALLBACK: Retornar subscription mock
-        return {
-          unsubscribe: () => {
-            console.log('🚨🚨🚨 MessageService: Mock subscription unsubscribe called')
-          }
-        }
+        return this.createFallbackSubscription(channelId, callback)
       }
     } catch (error) {
-      console.error('🚨🚨🚨 MessageService: ERROR CREATING SUBSCRIPTION! 🚨🚨🚨', error)
+      console.log('🔄 MessageService: Erro na subscription, usando fallback com polling:', error)
       // ✅ FALLBACK: Retornar subscription mock em caso de erro
-      return {
-        unsubscribe: () => {
-          console.log('🚨🚨🚨 MessageService: Mock subscription unsubscribe called')
+      return this.createFallbackSubscription(channelId, callback)
+    }
+  }
+
+  /**
+   * ✅ FALLBACK: Criar subscription usando polling como alternativa
+   */
+  private createFallbackSubscription(channelId: string, callback: (message: Message) => void) {
+    console.log('🔄 MessageService: Creating fallback subscription with polling for channel:', channelId)
+    
+    let lastMessageId: string | null = null
+    let isActive = true
+    
+    const pollInterval = setInterval(async () => {
+      if (!isActive) return
+      
+      try {
+        // Buscar mensagens mais recentes
+        console.log('🔄 MessageService: Polling channel messages for:', channelId)
+        
+        if (!this.supabase) {
+          console.error('🔄 MessageService: Supabase client not available for polling')
+          return
         }
+        
+        // ✅ VALIDAÇÃO: Verificar se channelId é válido
+        if (!channelId || channelId.trim() === '') {
+          console.error('🔄 MessageService: Invalid channelId for polling:', channelId)
+          return
+        }
+        
+        const { data: messages, error } = await this.supabase
+          .from('messages')
+          .select('*')
+          .eq('channel_id', channelId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        
+        if (error) {
+          console.error('🔄 MessageService: Error polling channel messages:', {
+            error: error.message || error,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            channelId,
+            fullError: JSON.stringify(error, null, 2)
+          })
+          return
+        }
+        
+        console.log('🔄 MessageService: Channel polling result:', { messagesCount: messages?.length || 0, channelId })
+        
+        if (messages && messages.length > 0) {
+          const latestMessage = messages[0]
+          if (!lastMessageId || latestMessage.id !== lastMessageId) {
+            lastMessageId = latestMessage.id
+            console.log('🔄 MessageService: New message found via polling:', latestMessage.id)
+            
+            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
+            const transformedMessage = {
+              id: latestMessage.id,
+              content: latestMessage.content,
+              type: latestMessage.type,
+              authorId: latestMessage.author_id,
+              channelId: latestMessage.channel_id,
+              dmId: latestMessage.dm_id,
+              createdAt: latestMessage.created_at,
+              updatedAt: latestMessage.updated_at,
+              attachmentName: latestMessage.attachment_name,
+              attachmentUrl: latestMessage.attachment_url,
+              dataAiHint: latestMessage.data_ai_hint,
+              reactions: [],
+              author: {
+                id: latestMessage.author_id,
+                display_name: `Usuário ${latestMessage.author_id?.slice(0, 8) || 'Unknown'}`,
+                username: `user_${latestMessage.author_id?.slice(0, 8) || 'unknown'}`,
+                avatar_url: null,
+                status: 'online'
+              }
+            }
+            
+            callback(transformedMessage as Message)
+          }
+        }
+      } catch (error) {
+        console.error('🔄 MessageService: Error in polling:', error)
+      }
+    }, 3000) // Poll a cada 3 segundos (menos agressivo)
+    
+    return {
+      unsubscribe: () => {
+        console.log('🔄 MessageService: Stopping fallback polling for channel:', channelId)
+        isActive = false
+        clearInterval(pollInterval)
+      }
+    }
+  }
+
+  /**
+   * Subscribe to real-time message updates for a specific DM
+   */
+  async subscribeToDMMessages(dmId: string, callback: (message: Message) => void) {
+    console.log('🚨🚨🚨 MessageService: SUBSCRIBING TO DM! 🚨🚨🚨', { 
+      dmId, 
+      timestamp: new Date().toISOString() 
+    });
+    
+    try {
+      // ✅ VERIFICAÇÃO: Verificar se o cliente Supabase está disponível
+      if (!this.supabase) {
+        console.error('🚨🚨🚨 MessageService: Supabase client is null!')
+        return this.createFallbackDMSubscription(dmId, callback)
+      }
+      
+      // ✅ VERIFICAÇÃO: Verificar se estamos no cliente (não SSR)
+      if (typeof window === 'undefined') {
+        console.log('🚨🚨🚨 MessageService: SSR detected, skipping DM subscription')
+        return this.createFallbackDMSubscription(dmId, callback)
+      }
+      
+      // ✅ VERIFICAÇÃO: Verificar se o usuário está autenticado
+      const { data: { session }, error: sessionError } = await this.supabase.auth.getSession()
+      if (sessionError) {
+        console.error('🚨🚨🚨 MessageService: Error getting session:', sessionError)
+        return this.createFallbackDMSubscription(dmId, callback)
+      }
+      
+      if (!session) {
+        console.log('🚨🚨🚨 MessageService: User not authenticated, skipping DM subscription')
+        return this.createFallbackDMSubscription(dmId, callback)
+      }
+      
+      console.log('🚨🚨🚨 MessageService: User authenticated, creating DM subscription for:', dmId)
+      console.log('🚨🚨🚨 MessageService: Session user ID:', session.user.id)
+      
+      // ✅ TENTATIVA: Criar subscription com timeout
+      const channel = this.supabase.channel(`dm:${dmId}`)
+      
+      const subscription = channel
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `dm_id=eq.${dmId}`
+          },
+          (payload: any) => {
+            console.log('🚨🚨🚨 MessageService: REAL-TIME DM MESSAGE RECEIVED! 🚨🚨🚨', {
+              dmId,
+              messageId: payload.new?.id,
+              content: payload.new?.content,
+              timestamp: new Date().toISOString()
+            });
+            callback(payload.new as Message)
+          }
+        )
+        .subscribe((status: any) => {
+          console.log('🚨🚨🚨 MessageService: DM SUBSCRIPTION STATUS! 🚨🚨🚨', {
+            dmId,
+            status,
+            timestamp: new Date().toISOString()
+          });
+
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ MessageService: DM Subscription criada com sucesso!')
+          } else if (status === 'CHANNEL_ERROR') {
+            console.log('🔄 MessageService: DM Subscription falhou, usando fallback com polling')
+            return this.createFallbackDMSubscription(dmId, callback)
+          } else if (status === 'TIMED_OUT') {
+            console.log('⏰ MessageService: Timeout na DM subscription, usando fallback com polling')
+            return this.createFallbackDMSubscription(dmId, callback)
+          } else if (status === 'CLOSED') {
+            console.log('🔒 MessageService: DM Subscription fechada!')
+          }
+        })
+
+      console.log('🚨🚨🚨 MessageService: DM SUBSCRIPTION CREATED! 🚨🚨🚨', {
+        dmId,
+        timestamp: new Date().toISOString()
+      });
+
+      if (subscription && typeof subscription.unsubscribe === 'function') {
+        return subscription
+      } else {
+        console.log('🚨🚨🚨 MessageService: DM Subscription created but unsubscribe method not available')
+        return this.createFallbackDMSubscription(dmId, callback)
+      }
+    } catch (error) {
+      console.log('🔄 MessageService: Erro na DM subscription, usando fallback com polling:', error)
+      return this.createFallbackDMSubscription(dmId, callback)
+    }
+  }
+
+  /**
+   * ✅ FALLBACK: Criar subscription usando polling como alternativa para DMs
+   */
+  private createFallbackDMSubscription(dmId: string, callback: (message: Message) => void) {
+    console.log('🔄 MessageService: Creating fallback DM subscription with polling for:', dmId)
+    
+    let lastMessageId: string | null = null
+    let isActive = true
+    
+    const pollInterval = setInterval(async () => {
+      if (!isActive) return
+      
+      try {
+        // Buscar mensagens mais recentes da DM
+        console.log('🔄 MessageService: Polling DM messages for:', dmId)
+        
+        if (!this.supabase) {
+          console.error('🔄 MessageService: Supabase client not available for polling')
+          return
+        }
+        
+        // ✅ DEBUG: Verificar se o cliente Supabase está funcionando
+        try {
+          const { data: testData, error: testError } = await this.supabase
+            .from('messages')
+            .select('id')
+            .limit(1)
+          
+          console.log('🔄 MessageService: Supabase connection test:', {
+            hasTestData: !!testData,
+            hasTestError: !!testError,
+            testErrorType: typeof testError,
+            dmId
+          })
+        } catch (testErr) {
+          console.error('🔄 MessageService: Supabase connection test failed:', testErr)
+          return
+        }
+        
+        // ✅ VALIDAÇÃO: Verificar se dmId é válido
+        if (!dmId || dmId.trim() === '') {
+          console.error('🔄 MessageService: Invalid dmId for polling:', dmId)
+          return
+        }
+        
+        // ✅ CONVERSÃO: Converter ID mock para UUID real se necessário
+        let realDmId = dmId
+        if (this.isMockDMId(dmId)) {
+          console.log('🔄 MessageService: Converting mock DM ID to real UUID:', dmId)
+          realDmId = await this.getRealDMId(dmId)
+          console.log('🔄 MessageService: Using real DM ID for polling:', realDmId)
+        }
+        
+        // ✅ VALIDAÇÃO: Verificar se o ID final é um UUID válido
+        if (!this.isValidUUID(realDmId)) {
+          console.error('🔄 MessageService: Final dmId is not a valid UUID:', realDmId)
+          return
+        }
+        
+        const { data: messages, error } = await this.supabase
+          .from('messages')
+          .select('*')
+          .eq('dm_id', realDmId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+        
+        console.log('🔄 MessageService: DM polling query completed:', {
+          originalDmId: dmId,
+          realDmId: realDmId,
+          hasData: !!messages,
+          dataLength: messages?.length || 0,
+          hasError: !!error,
+          errorType: typeof error,
+          errorKeys: error ? Object.keys(error) : [],
+          timestamp: new Date().toISOString()
+        })
+        
+        if (error) {
+          console.error('🔄 MessageService: Error polling DM messages:', {
+            error: error.message || error,
+            code: error.code,
+            details: error.details,
+            hint: error.hint,
+            originalDmId: dmId,
+            realDmId: realDmId,
+            fullError: JSON.stringify(error, null, 2)
+          })
+          return
+        }
+        
+        console.log('🔄 MessageService: Polling result:', { messagesCount: messages?.length || 0, originalDmId: dmId, realDmId: realDmId })
+        
+        if (messages && messages.length > 0) {
+          const latestMessage = messages[0]
+          if (!lastMessageId || latestMessage.id !== lastMessageId) {
+            lastMessageId = latestMessage.id
+            console.log('🔄 MessageService: New DM message found via polling:', latestMessage.id)
+            
+            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
+            const transformedMessage = {
+              id: latestMessage.id,
+              content: latestMessage.content,
+              type: latestMessage.type,
+              authorId: latestMessage.author_id,
+              channelId: latestMessage.channel_id,
+              dmId: latestMessage.dm_id,
+              createdAt: latestMessage.created_at,
+              updatedAt: latestMessage.updated_at,
+              attachmentName: latestMessage.attachment_name,
+              attachmentUrl: latestMessage.attachment_url,
+              dataAiHint: latestMessage.data_ai_hint,
+              reactions: [],
+              author: {
+                id: latestMessage.author_id,
+                display_name: `Usuário ${latestMessage.author_id?.slice(0, 8) || 'Unknown'}`,
+                username: `user_${latestMessage.author_id?.slice(0, 8) || 'unknown'}`,
+                avatar_url: null,
+                status: 'online'
+              }
+            }
+            
+            callback(transformedMessage as Message)
+          }
+        }
+      } catch (error) {
+        console.error('🔄 MessageService: Error in DM polling:', error)
+      }
+    }, 3000) // Poll a cada 3 segundos (menos agressivo)
+    
+    return {
+      unsubscribe: () => {
+        console.log('🔄 MessageService: Stopping fallback DM polling for:', dmId)
+        isActive = false
+        clearInterval(pollInterval)
       }
     }
   }
