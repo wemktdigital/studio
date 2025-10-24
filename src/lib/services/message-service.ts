@@ -739,9 +739,27 @@ export class MessageService {
               channelId,
               messageId: payload.new?.id,
               content: payload.new?.content,
+              authorId: payload.new?.author_id,
               timestamp: new Date().toISOString()
             });
-            callback(payload.new as Message)
+            
+            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
+            const transformedMessage: Message = {
+              id: payload.new.id,
+              content: payload.new.content,
+              type: payload.new.type,
+              authorId: payload.new.author_id,
+              channelId: payload.new.channel_id,
+              dmId: payload.new.dm_id,
+              createdAt: payload.new.created_at,
+              updatedAt: payload.new.updated_at,
+              attachmentName: payload.new.attachment_name,
+              attachmentUrl: payload.new.attachment_url,
+              dataAiHint: payload.new.data_ai_hint,
+              reactions: []
+            }
+            
+            callback(transformedMessage)
           }
         )
         .subscribe((status: any) => {

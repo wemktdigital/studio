@@ -24,6 +24,12 @@ const DateDivider = ({ date }: { date: Date }) => {
 
   useEffect(() => {
     const getLabel = () => {
+      // Validate date before using it
+      if (!date || isNaN(date.getTime())) {
+        console.warn('Invalid date passed to DateDivider:', date);
+        return 'Invalid Date';
+      }
+      
       if (isToday(date)) return 'Today';
       if (isYesterday(date)) return 'Yesterday';
       return format(date, 'MMMM d, yyyy');
@@ -130,7 +136,20 @@ export default function MessageList({ messages, users, conversation, workspaceId
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
-    const date = new Date(message.createdAt);
+    // Validate and handle invalid dates
+    let date: Date;
+    try {
+      date = new Date(message.createdAt);
+      // Check if date is valid
+      if (isNaN(date.getTime()) || !message.createdAt) {
+        console.warn('Invalid date for message:', message.id, 'createdAt:', message.createdAt);
+        date = new Date(); // Fallback to current date
+      }
+    } catch (error) {
+      console.warn('Error parsing date for message:', message.id, 'createdAt:', message.createdAt, error);
+      date = new Date(); // Fallback to current date
+    }
+    
     const dateKey = format(date, 'yyyy-MM-dd');
     
     if (!groups[dateKey]) {

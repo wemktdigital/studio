@@ -138,16 +138,29 @@ export default function DMMessageListSimple({ dmId, userId, workspaceId }: DMMes
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
-    const date = new Date(message.createdAt)
-    const dateKey = format(date, 'yyyy-MM-dd')
+    // Validate and handle invalid dates
+    let date: Date;
+    try {
+      date = new Date(message.createdAt);
+      // Check if date is valid
+      if (isNaN(date.getTime()) || !message.createdAt) {
+        console.warn('Invalid date for message:', message.id, 'createdAt:', message.createdAt);
+        date = new Date(); // Fallback to current date
+      }
+    } catch (error) {
+      console.warn('Error parsing date for message:', message.id, 'createdAt:', message.createdAt, error);
+      date = new Date(); // Fallback to current date
+    }
+    
+    const dateKey = format(date, 'yyyy-MM-dd');
     
     if (!groups[dateKey]) {
-      groups[dateKey] = []
+      groups[dateKey] = [];
     }
-    groups[dateKey].push(message)
+    groups[dateKey].push(message);
     
-    return groups
-  }, {} as Record<string, Message[]>)
+    return groups;
+  }, {} as Record<string, Message[]>);
 
   console.log('🚨🚨🚨 DMMessageListSimple: Grouped messages:', Object.keys(groupedMessages))
 

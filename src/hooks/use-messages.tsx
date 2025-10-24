@@ -6,6 +6,7 @@ import { useAuthContext } from '@/components/providers/auth-provider'
 import { toast } from '@/hooks/use-toast'
 import { useEffect, useRef } from 'react'
 import { useMentions } from './use-mentions'
+import { createClient } from '@/lib/supabase/client'
 
 export function useChannelMessages(channelId: string, workspaceId?: string) {
   const queryClient = useQueryClient()
@@ -227,6 +228,7 @@ export function useWorkspaceMessages(workspaceId: string) {
   const { user } = useAuthContext()
   const queryClient = useQueryClient()
   const subscriptionRef = useRef<any>(null)
+  const supabase = createClient()
 
   // Subscribe to all workspace messages
   useEffect(() => {
@@ -242,18 +244,52 @@ export function useWorkspaceMessages(workspaceId: string) {
 
     subscriptionRef.current = messageService.subscribeToWorkspaceMessages(
       workspaceId,
-      (newMessage) => {
+      async (newMessage) => {
         console.log(`🔔 useWorkspaceMessages: Received real-time message:`, newMessage)
-        // Update the specific channel's messages
-        if (newMessage.channel_id) {
-          queryClient.setQueryData(
-            ['channel-messages', newMessage.channel_id],
-            (oldData: any) => {
-              if (!oldData) return [newMessage]
-              return [...oldData, newMessage]
+        
+        // ✅ CORREÇÃO: Buscar dados do usuário para a nova mensagem
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id, display_name, handle, avatar_url, status')
+            .eq('id', newMessage.authorId)
+            .single()
+          
+          if (userError) {
+            console.warn('🔔 useWorkspaceMessages: Error fetching user data:', userError)
+          }
+          
+          // ✅ ADICIONAR: Dados do usuário à mensagem
+          const messageWithUser = {
+            ...newMessage,
+            author: userData ? {
+              id: userData.id,
+              displayName: userData.display_name || 'Usuário',
+              handle: userData.handle || 'usuario',
+              avatarUrl: userData.avatar_url || '',
+              status: userData.status || 'offline'
+            } : {
+              id: newMessage.authorId,
+              displayName: 'Usuário Desconhecido',
+              handle: 'unknown',
+              avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+              status: 'offline' as const
             }
-          )
-          console.log(`🔔 useWorkspaceMessages: Updated cache for channel ${newMessage.channel_id}`)
+          }
+          
+          // Update the specific channel's messages
+          if (newMessage.channel_id) {
+            queryClient.setQueryData(
+              ['channel-messages', newMessage.channel_id],
+              (oldData: any) => {
+                if (!oldData) return [messageWithUser]
+                return [...oldData, messageWithUser]
+              }
+            )
+            console.log(`🔔 useWorkspaceMessages: Updated cache for channel ${newMessage.channel_id}`)
+          }
+        } catch (error) {
+          console.error('🔔 useWorkspaceMessages: Error processing new message:', error)
         }
       }
     )
