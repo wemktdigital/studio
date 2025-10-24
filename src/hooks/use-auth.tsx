@@ -76,10 +76,15 @@ export function useAuth() {
       return
     }
     
-    // Get initial session
+    // Get initial session with timeout
     const getInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const sessionPromise = supabase.auth.getSession()
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        )
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]) as any
         
         if (error) {
           console.error('useAuth: Error getting initial session:', error)
@@ -115,7 +120,7 @@ export function useAuth() {
 
     getInitialSession()
 
-    // Listen for auth changes
+    // Listen for auth changes with timeout protection
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email)

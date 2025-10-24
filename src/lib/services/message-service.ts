@@ -14,6 +14,29 @@ interface LinkPreview {
   metadata?: Record<string, any>
 }
 
+// ✅ TIPOS: Definir tipos para mensagens com dados do autor
+interface MessageWithAuthor {
+  id: string
+  content: string
+  type: string
+  authorId: string
+  channelId: string | null
+  dmId: string | null
+  createdAt: string
+  updatedAt: string
+  attachmentName: string | null
+  attachmentUrl: string | null
+  dataAiHint: string | null
+  reactions: any[]
+  author: {
+    id: string
+    displayName: string
+    handle: string
+    avatarUrl: string
+    status: 'online' | 'offline' | 'away'
+  }
+}
+
 type Message = Database['public']['Tables']['messages']['Row']
 type MessageInsert = Database['public']['Tables']['messages']['Insert']
 type MessageUpdate = Database['public']['Tables']['messages']['Update']
@@ -21,6 +44,16 @@ type MessageReaction = Database['public']['Tables']['message_reactions']['Row']
 type Thread = Database['public']['Tables']['threads']['Row']
 type ThreadMessage = Database['public']['Tables']['thread_messages']['Row']
 
+/**
+ * ✅ SERVIÇO DE MENSAGENS: Classe responsável por gerenciar mensagens do chat
+ * 
+ * Funcionalidades:
+ * - Buscar mensagens de canais e DMs
+ * - Enviar mensagens
+ * - Atualizações em tempo real via Supabase Realtime
+ * - Incluir dados do autor (nome, avatar) em cada mensagem
+ * - Tratamento de erros e fallbacks
+ */
 export class MessageService {
   private supabase = createClient()
   private useFallbackMode = false // ✅ FALLBACK: Usar Supabase real para produção
@@ -33,7 +66,13 @@ export class MessageService {
   }
 
   /**
-   * Increment error count and force fallback if too many errors
+   * ✅ INCREMENTAR ERRO: Incrementa contador de erros e força fallback se necessário
+   * 
+   * Funcionalidades:
+   * - Incrementa contador de erros
+   * - Loga aviso com contagem atual
+   * - Força modo fallback se atingir limite máximo
+   * - Usado para detectar problemas persistentes com Supabase
    */
   private incrementErrorCount() {
     this.errorCount++
@@ -46,7 +85,14 @@ export class MessageService {
   }
 
   /**
-   * Test Supabase connection and set fallback mode if needed
+   * ✅ TESTE DE CONEXÃO: Testa conexão com Supabase e configura modo fallback
+   * 
+   * Funcionalidades:
+   * - Verifica se está rodando em SSR (pula teste)
+   * - Verifica se cliente Supabase é null
+   * - Executa query simples para testar conexão
+   * - Configura modo fallback se conexão falhar
+   * - Loga status da conexão
    */
   private async testSupabaseConnection() {
     try {
@@ -451,9 +497,21 @@ export class MessageService {
   }
 
   /**
-   * Get messages for a channel
+   * ✅ BUSCAR MENSAGENS: Obtém todas as mensagens de um canal específico
+   * 
+   * @param channelId - ID do canal (UUID válido ou ID mock)
+   * @param workspaceId - ID do workspace (opcional, para futuras otimizações)
+   * @returns Array de mensagens com dados do autor incluídos
+   * 
+   * Funcionalidades:
+   * - Valida se o channelId é válido
+   * - Converte IDs mock para UUIDs reais
+   * - Busca mensagens do Supabase
+   * - Busca dados dos usuários separadamente
+   * - Combina dados para criar mensagens completas
+   * - Retorna array vazio em caso de erro
    */
-  async getChannelMessages(channelId: string, workspaceId?: string): Promise<Message[]> {
+  async getChannelMessages(channelId: string, workspaceId?: string): Promise<MessageWithAuthor[]> {
     try {
       console.log('MessageService: Fetching real messages for channel:', channelId)
       
@@ -471,98 +529,102 @@ export class MessageService {
       console.log('MessageService: Attempting to fetch messages from Supabase for channel:', channelId)
       
       try {
-              // ✅ VERIFICAÇÃO ADICIONAL: Se for um canal mock, tentar buscar do Supabase mesmo assim
-      if (this.isMockChannelId(channelId)) {
-        console.log('MessageService: Mock channel detected, but trying Supabase anyway')
-        // Não retornar mock data imediatamente, continuar com Supabase
-      }
+        // ✅ VERIFICAÇÃO ADICIONAL: Se for um canal mock, tentar buscar do Supabase mesmo assim
+        if (this.isMockChannelId(channelId)) {
+          console.log('MessageService: Mock channel detected, but trying Supabase anyway')
+          // Não retornar mock data imediatamente, continuar com Supabase
+        }
+        
         // ✅ MAPEAR: Converter ID mock para ID real se necessário
         const realChannelId = this.isMockChannelId(channelId) ? this.getRealChannelId(channelId) : channelId
         console.log('MessageService: Using real channel ID:', realChannelId, 'for mock ID:', channelId)
         
-        const { data, error } = await this.supabase
+        // ✅ CORREÇÃO: Primeiro tentar query simples sem JOIN para verificar se há mensagens
+        const { data: simpleData, error: simpleError } = await this.supabase
           .from('messages')
-          .select(`
-            *,
-            channel:channels!messages_channel_id_fkey(
-              id,
-              name,
-              workspace_id
-            )
-          `)
+          .select('id, content, author_id, channel_id, created_at, updated_at, type')
           .eq('channel_id', realChannelId)
           .order('created_at', { ascending: true })
-          .limit(100) // Limitar a 100 mensagens para performance
+          .limit(100)
 
-        if (error) {
-          console.error('Error fetching channel messages:', {
-            error: error.message || error,
-            code: error.code,
-            details: error.details,
-            hint: error.hint,
+        if (simpleError) {
+          console.error('Error fetching channel messages (simple query):', {
+            error: simpleError.message || simpleError,
+            code: simpleError.code,
+            details: simpleError.details,
+            hint: simpleError.hint,
             channelId
           })
-          // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
           this.incrementErrorCount()
-          // ✅ SEM FALLBACK: Retornar array vazio em caso de erro
-          console.log('MessageService: No fallback to mock data - returning empty array')
+          console.log('MessageService: Simple query failed, returning empty array')
           return []
         }
 
-        if (data && data.length > 0) {
-          console.log('MessageService: Successfully fetched', data.length, 'real messages from Supabase')
-          
-          // ✅ FILTRAR: Garantir que as mensagens são do workspace correto
-          const workspaceFilteredMessages = workspaceId 
-            ? data.filter(msg => msg.channel?.workspace_id === workspaceId)
-            : data
-
-          console.log('MessageService: Filtered to', workspaceFilteredMessages.length, 'messages for workspace:', workspaceId)
-          
-          // ✅ FILTRAR: Excluir mensagens que estão em threads
-          const messageIds = workspaceFilteredMessages.map(msg => msg.id)
-          const { data: threadMessageIds, error: threadError } = await this.supabase
-            .from('thread_messages')
-            .select('message_id')
-            .in('message_id', messageIds)
-
-          let filteredMessages = workspaceFilteredMessages
-          if (!threadError && threadMessageIds) {
-            const threadMessageIdSet = new Set(threadMessageIds.map(tm => tm.message_id))
-            filteredMessages = workspaceFilteredMessages.filter(msg => !threadMessageIdSet.has(msg.id))
-            console.log('MessageService: Filtered out', workspaceFilteredMessages.length - filteredMessages.length, 'thread messages')
-          } else if (threadError) {
-            console.warn('MessageService: Error filtering thread messages, showing all messages:', threadError)
-          }
-          
-          // ✅ FILTRAR ADICIONAL: Excluir mensagens com ID especial de thread
-          const beforeSpecialFilter = filteredMessages.length
-          filteredMessages = filteredMessages.filter(msg => 
-            msg.dm_id !== '00000000-0000-0000-0000-000000000001'
-          )
-          console.log('MessageService: Filtered out', beforeSpecialFilter - filteredMessages.length, 'special thread messages from channel')
-          
-          // ✅ RESETAR CONTADOR: Operação bem-sucedida
-          this.errorCount = 0
-          
-          // ✅ COMBINAR: Usar apenas dados do Supabase
-          const allMessages = [...filteredMessages]
-          
-          // ✅ REMOVER DUPLICATAS: Baseado no ID da mensagem
-          const uniqueMessages = allMessages.filter((message, index, self) => 
-            index === self.findIndex(m => m.id === message.id)
-          )
-          
-          // ✅ ORDENAR: Por timestamp de criação
-          uniqueMessages.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-          
-          console.log('MessageService: Returning messages - Base:', filteredMessages.length, 'Unique:', uniqueMessages.length)
-          return uniqueMessages
+        if (!simpleData || simpleData.length === 0) {
+          console.log('MessageService: No messages found for channel:', realChannelId)
+          return []
         }
 
-        // ✅ SE VAZIO: Retornar array vazio se não houver mensagens reais
-        console.log('MessageService: No real messages found, returning empty array')
-        return []
+        console.log('MessageService: Found', simpleData.length, 'messages, now fetching user data')
+
+        // ✅ CORREÇÃO: Buscar dados dos usuários separadamente para evitar problemas de JOIN
+        const authorIds = [...new Set(simpleData.map(msg => msg.author_id))]
+        const { data: usersData, error: usersError } = await this.supabase
+          .from('users')
+          .select('id, display_name, handle, avatar_url, status')
+          .in('id', authorIds)
+
+        if (usersError) {
+          console.warn('MessageService: Error fetching users data:', usersError)
+        }
+
+        // ✅ CORREÇÃO: Criar mapa de usuários para lookup rápido
+        const usersMap = new Map()
+        if (usersData) {
+          usersData.forEach(user => {
+            usersMap.set(user.id, user)
+          })
+        }
+
+        // ✅ TRANSFORMAR: Converter para formato Message com dados do autor
+        const transformedMessages: MessageWithAuthor[] = simpleData.map(msg => {
+          const user = usersMap.get(msg.author_id)
+          return {
+            id: msg.id,
+            content: msg.content,
+            type: msg.type || 'text',
+            authorId: msg.author_id,
+            channelId: msg.channel_id,
+            dmId: null,
+            attachmentName: null,
+            attachmentUrl: null,
+            dataAiHint: null,
+            createdAt: msg.created_at,
+            updatedAt: msg.updated_at,
+            reactions: [],
+            // ✅ ADICIONAR: Dados do autor com fallback para usuário desconhecido
+            author: user ? {
+              id: user.id,
+              displayName: user.display_name || 'Usuário',
+              handle: user.handle || 'usuario',
+              avatarUrl: user.avatar_url || 'https://i.pravatar.cc/40?u=default',
+              status: user.status || 'offline'
+            } : {
+              id: msg.author_id,
+              displayName: 'Usuário Desconhecido',
+              handle: 'unknown',
+              avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+              status: 'offline' as const
+            }
+          }
+        })
+
+        console.log('MessageService: Successfully transformed', transformedMessages.length, 'messages')
+        
+        // ✅ RESETAR CONTADOR: Operação bem-sucedida
+        this.errorCount = 0
+        
+        return transformedMessages
         
       } catch (error) {
         console.error('Error in Supabase query:', {
@@ -572,7 +634,7 @@ export class MessageService {
         })
         // ✅ INCREMENTAR CONTADOR: Para detectar problemas persistentes
         this.incrementErrorCount()
-        console.log('MessageService: No fallback to mock data - returning empty array')
+        console.log('MessageService: Query failed, returning empty array')
         return []
       }
     } catch (error) {
@@ -588,9 +650,20 @@ export class MessageService {
 
 
   /**
-   * Send a message to a channel
+   * ✅ ENVIAR MENSAGEM: Salva uma nova mensagem no canal
+   * 
+   * @param message - Dados da mensagem a ser enviada (sem id, created_at, updated_at)
+   * @returns Mensagem salva com dados do autor incluídos
+   * 
+   * Funcionalidades:
+   * - Valida se não está em modo fallback
+   * - Converte IDs mock para UUIDs reais
+   * - Insere mensagem no Supabase
+   * - Busca dados do usuário autor
+   * - Retorna mensagem completa com dados do autor
+   * - Lança erro em caso de falha
    */
-  async sendMessage(message: Omit<MessageInsert, 'id' | 'created_at' | 'updated_at'>): Promise<Message> {
+  async sendMessage(message: Omit<MessageInsert, 'id' | 'created_at' | 'updated_at'>): Promise<MessageWithAuthor> {
     console.log('MessageService.sendMessage: Called with:', message)
     
     try {
@@ -629,10 +702,11 @@ export class MessageService {
       
       console.log('MessageService.sendMessage: Inserting data:', insertData)
       
+      // ✅ CORREÇÃO: Usar query simples para inserir mensagem
       const { data, error } = await this.supabase
         .from('messages')
         .insert(insertData)
-        .select()
+        .select('id, content, author_id, channel_id, dm_id, created_at, updated_at, type')
         .single()
 
       if (error) {
@@ -668,7 +742,48 @@ export class MessageService {
         // ✅ RESETAR CONTADOR: Operação bem-sucedida
         this.errorCount = 0
         
-        return data
+        // ✅ CORREÇÃO: Buscar dados do usuário separadamente
+        const { data: userData, error: userError } = await this.supabase
+          .from('users')
+          .select('id, display_name, handle, avatar_url, status')
+          .eq('id', data.author_id)
+          .single()
+
+        if (userError) {
+          console.warn('MessageService.sendMessage: Error fetching user data:', userError)
+        }
+        
+        // ✅ TRANSFORMAR: Converter para formato Message com dados do autor
+        const transformedMessage: MessageWithAuthor = {
+          id: data.id,
+          content: data.content,
+          type: data.type || 'text',
+          authorId: data.author_id,
+          channelId: data.channel_id,
+          dmId: data.dm_id,
+          attachmentName: null,
+          attachmentUrl: null,
+          dataAiHint: null,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+          reactions: [],
+          // ✅ ADICIONAR: Dados do autor com fallback para usuário desconhecido
+          author: userData ? {
+            id: userData.id,
+            displayName: userData.display_name || 'Usuário',
+            handle: userData.handle || 'usuario',
+            avatarUrl: userData.avatar_url || 'https://i.pravatar.cc/40?u=default',
+            status: userData.status || 'offline'
+          } : {
+            id: data.author_id,
+            displayName: 'Usuário Desconhecido',
+            handle: 'unknown',
+            avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+            status: 'offline' as const
+          }
+        }
+        
+        return transformedMessage
       }
 
       // ✅ FALLBACK: Se não retornou dados, lançar erro
@@ -686,9 +801,21 @@ export class MessageService {
 
 
   /**
-   * Subscribe to real-time message updates for a specific channel
+   * ✅ TEMPO REAL: Inscreve-se para receber mensagens em tempo real de um canal
+   * 
+   * @param channelId - ID do canal para monitorar
+   * @param callback - Função chamada quando uma nova mensagem é recebida
+   * @returns Subscription que pode ser cancelada
+   * 
+   * Funcionalidades:
+   * - Verifica se o cliente Supabase está disponível
+   * - Verifica se não está em SSR
+   * - Verifica se o usuário está autenticado
+   * - Cria subscription para mudanças na tabela messages
+   * - Transforma mensagens recebidas para incluir dados do autor
+   * - Usa fallback com polling se subscription falhar
    */
-  async subscribeToChannelMessages(channelId: string, callback: (message: Message) => void) {
+  async subscribeToChannelMessages(channelId: string, callback: (message: MessageWithAuthor) => void) {
     console.log('🚨🚨🚨 MessageService: SUBSCRIBING TO CHANNEL! 🚨🚨🚨', { 
       channelId, 
       timestamp: new Date().toISOString() 
@@ -744,7 +871,7 @@ export class MessageService {
             });
             
             // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
-            const transformedMessage: Message = {
+            const transformedMessage: MessageWithAuthor = {
               id: payload.new.id,
               content: payload.new.content,
               type: payload.new.type,
@@ -756,7 +883,15 @@ export class MessageService {
               attachmentName: payload.new.attachment_name,
               attachmentUrl: payload.new.attachment_url,
               dataAiHint: payload.new.data_ai_hint,
-              reactions: []
+              reactions: [],
+              // ✅ ADICIONAR: Dados do autor (será buscado no hook useWorkspaceMessages)
+              author: {
+                id: payload.new.author_id,
+                displayName: 'Carregando...',
+                handle: 'loading',
+                avatarUrl: '',
+                status: 'offline' as const
+              }
             }
             
             callback(transformedMessage)
@@ -805,8 +940,20 @@ export class MessageService {
 
   /**
    * ✅ FALLBACK: Criar subscription usando polling como alternativa
+   * 
+   * @param channelId - ID do canal para monitorar
+   * @param callback - Função chamada quando uma nova mensagem é encontrada
+   * @returns Subscription mock que pode ser cancelada
+   * 
+   * Funcionalidades:
+   * - Cria um intervalo de polling a cada 3 segundos
+   * - Busca a mensagem mais recente do canal
+   * - Compara com a última mensagem conhecida
+   * - Chama callback se encontrar nova mensagem
+   * - Transforma mensagem para incluir dados do autor
+   * - Retorna objeto com método unsubscribe
    */
-  private createFallbackSubscription(channelId: string, callback: (message: Message) => void) {
+  private createFallbackSubscription(channelId: string, callback: (message: MessageWithAuthor) => void) {
     console.log('🔄 MessageService: Creating fallback subscription with polling for channel:', channelId)
     
     let lastMessageId: string | null = null
@@ -858,7 +1005,7 @@ export class MessageService {
             console.log('🔄 MessageService: New message found via polling:', latestMessage.id)
             
             // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
-            const transformedMessage = {
+            const transformedMessage: MessageWithAuthor = {
               id: latestMessage.id,
               content: latestMessage.content,
               type: latestMessage.type,
@@ -873,14 +1020,14 @@ export class MessageService {
               reactions: [],
               author: {
                 id: latestMessage.author_id,
-                display_name: `Usuário ${latestMessage.author_id?.slice(0, 8) || 'Unknown'}`,
-                username: `user_${latestMessage.author_id?.slice(0, 8) || 'unknown'}`,
-                avatar_url: null,
+                displayName: `Usuário ${latestMessage.author_id?.slice(0, 8) || 'Unknown'}`,
+                handle: `user_${latestMessage.author_id?.slice(0, 8) || 'unknown'}`,
+                avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
                 status: 'online'
               }
             }
             
-            callback(transformedMessage as Message)
+            callback(transformedMessage)
           }
         }
       } catch (error) {
@@ -1132,10 +1279,22 @@ export class MessageService {
   }
 
   /**
-   * Subscribe to real-time message updates for all channels in a workspace
-   * Note: This is a simplified subscription since messages don't have workspace_id
+   * ✅ TEMPO REAL WORKSPACE: Inscreve-se para receber mensagens de todos os canais do workspace
+   * 
+   * @param workspaceId - ID do workspace para monitorar
+   * @param callback - Função chamada quando uma nova mensagem é recebida
+   * @returns Subscription que pode ser cancelada
+   * 
+   * Funcionalidades:
+   * - Cria subscription para todas as mensagens do workspace
+   * - Monitora mudanças na tabela messages
+   * - Transforma mensagens recebidas para incluir dados do autor
+   * - Retorna subscription mock em caso de erro
+   * 
+   * Nota: Como messages não tem workspace_id, monitora todas as mensagens
+   * Em uma app real, você filtraria por channel_id baseado nos canais do workspace
    */
-  subscribeToWorkspaceMessages(workspaceId: string, callback: (message: Message) => void) {
+  subscribeToWorkspaceMessages(workspaceId: string, callback: (message: MessageWithAuthor) => void) {
     console.log(`🔔 MessageService: Subscribing to workspace ${workspaceId}`)
     
     try {
@@ -1153,7 +1312,32 @@ export class MessageService {
           },
           (payload: any) => {
             console.log(`🔔 MessageService: Received real-time message for workspace ${workspaceId}:`, payload)
-            callback(payload.new as Message)
+            
+            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
+            const transformedMessage: MessageWithAuthor = {
+              id: payload.new.id,
+              content: payload.new.content,
+              type: payload.new.type,
+              authorId: payload.new.author_id,
+              channelId: payload.new.channel_id,
+              dmId: payload.new.dm_id,
+              createdAt: payload.new.created_at,
+              updatedAt: payload.new.updated_at,
+              attachmentName: payload.new.attachment_name,
+              attachmentUrl: payload.new.attachment_url,
+              dataAiHint: payload.new.data_ai_hint,
+              reactions: [],
+              // ✅ ADICIONAR: Dados do autor (será buscado no hook useWorkspaceMessages)
+              author: {
+                id: payload.new.author_id,
+                displayName: 'Carregando...',
+                handle: 'loading',
+                avatarUrl: '',
+                status: 'offline' as const
+              }
+            }
+            
+            callback(transformedMessage)
           }
         )
         .subscribe((status: any) => {
@@ -1345,7 +1529,15 @@ export class MessageService {
 
 
   /**
-   * Validate if a string is a valid UUID
+   * ✅ VALIDAR UUID: Verifica se uma string é um UUID válido
+   * 
+   * @param uuid - String a ser validada
+   * @returns true se for UUID válido, false caso contrário
+   * 
+   * Funcionalidades:
+   * - Usa regex para validar formato UUID v4
+   * - Aceita UUIDs em minúsculas ou maiúsculas
+   * - Retorna boolean para facilitar uso em condicionais
    */
   private isValidUUID(uuid: string): boolean {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -1353,7 +1545,15 @@ export class MessageService {
   }
 
   /**
-   * Check if a string is a mock channel ID (simple numeric IDs or channel names)
+   * ✅ VERIFICAR CANAL MOCK: Verifica se uma string é um ID de canal mock
+   * 
+   * @param str - String a ser verificada
+   * @returns true se for ID mock, false caso contrário
+   * 
+   * Funcionalidades:
+   * - Verifica se é número simples (1, 2, 3, etc.)
+   * - Verifica se é nome de canal conhecido
+   * - Usado para identificar canais mock vs UUIDs reais
    */
   private isMockChannelId(str: string): boolean {
     // Mock channels use simple IDs like '1', '2', '3' or channel names like 'general', 'design-system'
@@ -1361,7 +1561,16 @@ export class MessageService {
   }
 
   /**
-   * Get real channel ID from mock channel ID
+   * ✅ MAPEAR CANAL REAL: Converte ID mock de canal para UUID real
+   * 
+   * @param mockChannelId - ID mock do canal
+   * @returns UUID real correspondente
+   * 
+   * Funcionalidades:
+   * - Mapeia IDs numéricos para UUIDs específicos
+   * - Mapeia nomes de canais para UUIDs específicos
+   * - Retorna o próprio ID se não for mock
+   * - Usado para compatibilidade com banco de dados real
    */
   private getRealChannelId(mockChannelId: string): string {
     const channelMap: { [key: string]: string } = {
@@ -1590,7 +1799,15 @@ export class MessageService {
 
 
   /**
-   * Gerar UUID válido para mensagens mock
+   * ✅ GERAR UUID: Gera um UUID válido para mensagens mock
+   * 
+   * @returns UUID v4 válido
+   * 
+   * Funcionalidades:
+   * - Usa algoritmo padrão para gerar UUID v4
+   * - Substitui caracteres 'x' e 'y' por valores aleatórios
+   * - Retorna string no formato UUID padrão
+   * - Usado para criar IDs únicos em dados mock
    */
   private generateValidUUID(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

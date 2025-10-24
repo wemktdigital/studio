@@ -183,18 +183,20 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
     messages: (query.data || [])
       .map(msg => ({
         id: msg.id,
-        channelId: msg.channel_id || undefined,
-        dmId: msg.dm_id || undefined,
-        authorId: msg.author_id,
+        channelId: msg.channelId || undefined,
+        dmId: msg.dmId || undefined,
+        authorId: msg.authorId,
         content: msg.content,
         type: msg.type as 'text' | 'image' | 'code' | 'link',
-        createdAt: msg.created_at,
-        reactions: [], // ✅ IMPLEMENTADO: Sistema de reações (será carregado dinamicamente)
-        attachment: msg.attachment_name && msg.attachment_url ? {
-          name: msg.attachment_name,
-          url: msg.attachment_url
+        createdAt: msg.createdAt,
+        reactions: msg.reactions || [],
+        attachment: msg.attachmentName && msg.attachmentUrl ? {
+          name: msg.attachmentName,
+          url: msg.attachmentUrl
         } : undefined,
-        dataAiHint: msg.data_ai_hint || undefined
+        dataAiHint: msg.dataAiHint || undefined,
+        // ✅ ADICIONADO: Dados do autor incluídos diretamente da mensagem
+        author: msg.author
       }))
       // ✅ ADICIONADO: Remover mensagens duplicadas baseadas no ID
       .filter((message, index, self) => 
