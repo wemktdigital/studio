@@ -63,3 +63,4 @@ FROM messages m
 LEFT JOIN users u ON m.author_id = u.id
 ORDER BY m.created_at DESC
 LIMIT 5;
+

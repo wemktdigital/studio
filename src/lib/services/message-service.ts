@@ -861,7 +861,7 @@ export class MessageService {
             table: 'messages',
             filter: `channel_id=eq.${channelId}`
           },
-          (payload: any) => {
+          async (payload: any) => {
             console.log('🚨🚨🚨 MessageService: REAL-TIME MESSAGE RECEIVED! 🚨🚨🚨', { 
               channelId,
               messageId: payload.new?.id,
@@ -870,31 +870,81 @@ export class MessageService {
               timestamp: new Date().toISOString()
             });
             
-            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
-            const transformedMessage: MessageWithAuthor = {
-              id: payload.new.id,
-              content: payload.new.content,
-              type: payload.new.type,
-              authorId: payload.new.author_id,
-              channelId: payload.new.channel_id,
-              dmId: payload.new.dm_id,
-              createdAt: payload.new.created_at,
-              updatedAt: payload.new.updated_at,
-              attachmentName: payload.new.attachment_name,
-              attachmentUrl: payload.new.attachment_url,
-              dataAiHint: payload.new.data_ai_hint,
-              reactions: [],
-              // ✅ ADICIONAR: Dados do autor (será buscado no hook useWorkspaceMessages)
-              author: {
-                id: payload.new.author_id,
-                displayName: 'Carregando...',
-                handle: 'loading',
-                avatarUrl: '',
-                status: 'offline' as const
+            // ✅ BUSCAR DADOS DO AUTOR
+            try {
+              const { data: userData, error: userError } = await this.supabase
+                .from('users')
+                .select('id, display_name, username, handle, avatar_url, status')
+                .eq('id', payload.new.author_id)
+                .single()
+              
+              console.log('🔍 🔍 🔍 DIAGNÓSTICO COMPLETO 🔍 🔍 🔍')
+              console.log('👤 Author ID buscado:', payload.new.author_id)
+              console.log('👤 UserData retornado:', userData)
+              console.log('👤 Display Name:', userData?.display_name)
+              console.log('👤 Username:', userData?.username)
+              console.log('👤 Handle:', userData?.handle)
+              console.log('👤 Tem dados?', !!userData)
+              console.log('👤 Erro:', userError)
+              
+              // ✅ CRIAR MENSAGEM COM DADOS DO AUTOR
+              const transformedMessage: MessageWithAuthor = {
+                id: payload.new.id,
+                content: payload.new.content,
+                type: payload.new.type,
+                authorId: payload.new.author_id,
+                channelId: payload.new.channel_id,
+                dmId: payload.new.dm_id,
+                createdAt: payload.new.created_at,
+                updatedAt: payload.new.updated_at,
+                attachmentName: payload.new.attachment_name,
+                attachmentUrl: payload.new.attachment_url,
+                dataAiHint: payload.new.data_ai_hint,
+                reactions: [],
+                // ✅ ADICIONAR: Dados do autor do banco de dados
+                author: userData ? {
+                  id: userData.id,
+                  displayName: userData.display_name || userData.username || userData.handle || `Usuário ${payload.new.author_id.slice(0, 8)}`,
+                  handle: userData.handle || userData.username || 'usuario',
+                  avatarUrl: userData.avatar_url || 'https://i.pravatar.cc/40?u=default',
+                  status: userData.status || 'offline'
+                } : {
+                  id: payload.new.author_id,
+                  displayName: `Usuário ${payload.new.author_id.slice(0, 8)}`,
+                  handle: `user_${payload.new.author_id.slice(0, 8)}`,
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
               }
+              
+              console.log('✅ Enviando mensagem com autor:', transformedMessage.author.displayName)
+              callback(transformedMessage)
+            } catch (error) {
+              console.error('❌ Erro ao buscar autor:', error)
+              // Enviar mensagem mesmo sem dados do autor
+              const transformedMessage: MessageWithAuthor = {
+                id: payload.new.id,
+                content: payload.new.content,
+                type: payload.new.type,
+                authorId: payload.new.author_id,
+                channelId: payload.new.channel_id,
+                dmId: payload.new.dm_id,
+                createdAt: payload.new.created_at,
+                updatedAt: payload.new.updated_at,
+                attachmentName: payload.new.attachment_name,
+                attachmentUrl: payload.new.attachment_url,
+                dataAiHint: payload.new.data_ai_hint,
+                reactions: [],
+                author: {
+                  id: payload.new.author_id,
+                  displayName: 'Usuário Desconhecido',
+                  handle: 'unknown',
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
+              }
+              callback(transformedMessage)
             }
-            
-            callback(transformedMessage)
           }
         )
         .subscribe((status: any) => {
@@ -1004,30 +1054,79 @@ export class MessageService {
             lastMessageId = latestMessage.id
             console.log('🔄 MessageService: New message found via polling:', latestMessage.id)
             
-            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
-            const transformedMessage: MessageWithAuthor = {
-              id: latestMessage.id,
-              content: latestMessage.content,
-              type: latestMessage.type,
-              authorId: latestMessage.author_id,
-              channelId: latestMessage.channel_id,
-              dmId: latestMessage.dm_id,
-              createdAt: latestMessage.created_at,
-              updatedAt: latestMessage.updated_at,
-              attachmentName: latestMessage.attachment_name,
-              attachmentUrl: latestMessage.attachment_url,
-              dataAiHint: latestMessage.data_ai_hint,
-              reactions: [],
-              author: {
-                id: latestMessage.author_id,
-                displayName: `Usuário ${latestMessage.author_id?.slice(0, 8) || 'Unknown'}`,
-                handle: `user_${latestMessage.author_id?.slice(0, 8) || 'unknown'}`,
-                avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
-                status: 'online'
+            // ✅ BUSCAR DADOS DO AUTOR
+            try {
+              const { data: userData, error: userError } = await this.supabase
+                .from('users')
+                .select('id, display_name, username, handle, avatar_url, status')
+                .eq('id', latestMessage.author_id)
+                .single()
+              
+              console.log('🔍 [POLLING] Autor encontrado:', { 
+                displayName: userData?.display_name,
+                username: userData?.username,
+                hasData: !!userData,
+                error: userError?.message 
+              })
+              
+              // ✅ CRIAR MENSAGEM COM DADOS DO AUTOR
+              const transformedMessage: MessageWithAuthor = {
+                id: latestMessage.id,
+                content: latestMessage.content,
+                type: latestMessage.type,
+                authorId: latestMessage.author_id,
+                channelId: latestMessage.channel_id,
+                dmId: latestMessage.dm_id,
+                createdAt: latestMessage.created_at,
+                updatedAt: latestMessage.updated_at,
+                attachmentName: latestMessage.attachment_name,
+                attachmentUrl: latestMessage.attachment_url,
+                dataAiHint: latestMessage.data_ai_hint,
+                reactions: [],
+                // ✅ ADICIONAR: Dados do autor do banco de dados
+                author: userData ? {
+                  id: userData.id,
+                  displayName: userData.display_name || userData.username || userData.handle || `Usuário ${latestMessage.author_id.slice(0, 8)}`,
+                  handle: userData.handle || userData.username || 'usuario',
+                  avatarUrl: userData.avatar_url || 'https://i.pravatar.cc/40?u=default',
+                  status: userData.status || 'offline'
+                } : {
+                  id: latestMessage.author_id,
+                  displayName: `Usuário ${latestMessage.author_id.slice(0, 8)}`,
+                  handle: `user_${latestMessage.author_id.slice(0, 8)}`,
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
               }
+              
+              console.log('✅ [POLLING] Enviando mensagem com autor:', transformedMessage.author.displayName)
+              callback(transformedMessage)
+            } catch (error) {
+              console.error('❌ [POLLING] Erro ao buscar autor:', error)
+              // Enviar mensagem mesmo sem dados do autor
+              const transformedMessage: MessageWithAuthor = {
+                id: latestMessage.id,
+                content: latestMessage.content,
+                type: latestMessage.type,
+                authorId: latestMessage.author_id,
+                channelId: latestMessage.channel_id,
+                dmId: latestMessage.dm_id,
+                createdAt: latestMessage.created_at,
+                updatedAt: latestMessage.updated_at,
+                attachmentName: latestMessage.attachment_name,
+                attachmentUrl: latestMessage.attachment_url,
+                dataAiHint: latestMessage.data_ai_hint,
+                reactions: [],
+                author: {
+                  id: latestMessage.author_id,
+                  displayName: 'Usuário Desconhecido',
+                  handle: 'unknown',
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
+              }
+              callback(transformedMessage)
             }
-            
-            callback(transformedMessage)
           }
         }
       } catch (error) {

@@ -115,3 +115,4 @@ SELECT
 FROM messages m
 LEFT JOIN direct_messages dm ON m.dm_id = dm.id
 WHERE m.dm_id IS NOT NULL AND dm.id IS NULL;
+

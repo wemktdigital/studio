@@ -24,7 +24,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans')}>
+      {/* ✅ SUPRESSÃO DE HYDRATION WARNING: Necessário porque extensões de navegador injetam atributos 
+          na tag <body> (como cz-shortcut-listen="true"), causando diferença entre HTML do servidor e cliente */}
+      <body className={cn('font-body antialiased', 'min-h-screen bg-background font-sans')} suppressHydrationWarning>
         <Providers>
           {children}
           <Toaster />

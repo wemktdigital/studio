@@ -59,6 +59,9 @@ export type Message = {
   };
   dataAiHint?: string;
   mentions?: MessageMention[];
+  // 🔹 ADICIONADO: Dados do autor incluídos diretamente na mensagem
+  // Isso permite que o nome e avatar apareçam imediatamente sem fazer consultas adicionais
+  author?: User;
 };
 
 export type MessageMention = {

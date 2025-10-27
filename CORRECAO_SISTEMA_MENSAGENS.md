@@ -93,3 +93,4 @@ Os scripts irão:
 4. Testar relacionamentos
 
 **A aplicação já está preparada para funcionar após a correção do banco de dados.**
+

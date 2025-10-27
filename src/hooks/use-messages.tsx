@@ -20,25 +20,28 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
     timestamp: new Date().toISOString() 
   });
 
+  // 🔹 CARREGAR MENSAGENS: Query para buscar mensagens do canal via Supabase
+  // Esta query executa quando o canal é selecionado e carrega as mensagens com JOIN em users
   const query = useQuery({
     queryKey: ['channel-messages', channelId, workspaceId],
     queryFn: () => messageService.getChannelMessages(channelId, workspaceId),
-    enabled: !!channelId && channelId !== 'test-channel', // ✅ IGNORAR: channelId de teste
-    staleTime: 0, // Always fresh
-    retry: 1, // Tentar apenas uma vez
-    refetchOnWindowFocus: false, // Não refazer query ao focar na janela
-    gcTime: 10 * 60 * 1000 // 10 minutos para garbage collection
+    enabled: !!channelId && channelId !== 'test-channel', // 🔹 FILTRO: Ignorar canais de teste
+    staleTime: 0, // 🔹 SEMPRE ATUALIZADO: Sempre considerar dados stale para buscas recentes
+    retry: 1, // 🔹 RETRY: Tentar apenas uma vez em caso de erro
+    refetchOnWindowFocus: false, // 🔹 PERFORMANCE: Não refazer query ao focar na janela
+    gcTime: 10 * 60 * 1000 // 🔹 CACHE: Manter em cache por 10 minutos antes de descartar
   })
 
-  // Fetch users for this channel
+  // 🔹 CARREGAR USUÁRIOS: Query separada para buscar lista de usuários do canal
+  // Usado para exibir lista de membros e permitir mencionar usuários
   const usersQuery = useQuery({
     queryKey: ['channel-users', channelId],
     queryFn: () => messageService.getChannelUsers(channelId),
-    enabled: !!channelId && channelId !== 'test-channel', // ✅ IGNORAR: channelId de teste
-    staleTime: 0,
-    retry: 1, // Tentar apenas uma vez
-    refetchOnWindowFocus: false, // Não refazer query ao focar na janela
-    gcTime: 10 * 60 * 1000 // 10 minutos para garbage collection
+    enabled: !!channelId && channelId !== 'test-channel', // 🔹 FILTRO: Ignorar canais de teste
+    staleTime: 0, // 🔹 SEMPRE ATUALIZADO: Lista de usuários pode mudar
+    retry: 1, // 🔹 RETRY: Tentar apenas uma vez
+    refetchOnWindowFocus: false, // 🔹 PERFORMANCE: Não refazer query ao focar na janela
+    gcTime: 10 * 60 * 1000 // 🔹 CACHE: Manter em cache por 10 minutos
   })
 
   console.log('🚨🚨🚨 useChannelMessages: Query results:', {
@@ -54,77 +57,91 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
     }
   });
 
-  // Real-time subscription
+  // 🔹 TEMPO REAL: Effect para inscrever-se em mudanças em tempo real via Supabase Realtime
+  // Quando outra pessoa envia mensagem no canal, ela aparece automaticamente sem recarregar a página
   useEffect(() => {
-    if (!channelId || channelId === 'test-channel') return // ✅ IGNORAR: channelId de teste
+    // 🔹 VALIDAÇÃO: Ignorar canais de teste
+    if (!channelId || channelId === 'test-channel') return
+    
+    // 🔹 AUTENTICAÇÃO: Verificar se usuário está autenticado
     if (!user) {
-      console.log('🔔 useChannelMessages: User not authenticated, skipping subscription')
+      console.log('🔔 useChannelMessages: Usuário não autenticado, pulando subscription')
       return
     }
 
-    console.log('🔔 useChannelMessages: Setting up subscription for channel', channelId)
-    console.log('🔔 useChannelMessages: User authenticated:', !!user)
-    console.log('🔔 useChannelMessages: User ID:', user?.id)
+    console.log('🔔 useChannelMessages: Configurando subscription para canal', channelId)
     
     let subscription: any = null
     
+    // 🔹 CONFIGURAR SUBSCRIPTION: Função para criar conexão em tempo real
     const setupSubscription = async () => {
       try {
+        console.log('🔔 useChannelMessages: Criando subscription...')
         subscription = await messageService.subscribeToChannelMessages(channelId, (newMessage) => {
-          console.log('🚨🚨🚨 useChannelMessages: REAL-TIME MESSAGE RECEIVED! 🚨🚨🚨', { 
-            messageId: newMessage.id, 
-            content: newMessage.content,
-            timestamp: new Date().toISOString()
-          });
+          console.log('📨 [HOOK] 🔥🔥🔥 MENSAGEM RECEBIDA! 🔥🔥🔥')
+          console.log('📨 [HOOK] ID da mensagem:', newMessage.id)
+          console.log('📨 [HOOK] Conteúdo:', newMessage.content)
+          console.log('📨 [HOOK] Autor ID:', newMessage.authorId)
+          console.log('📨 [HOOK] Autor completo:', newMessage.author)
+          console.log('📨 [HOOK] DisplayName:', newMessage.author?.displayName)
           
-          // Update cache
+          // ✅ VALIDAÇÃO SIMPLES: Verificar autor
+          if (!newMessage.author || !newMessage.author.displayName || newMessage.author.displayName.trim() === '') {
+            console.warn('⚠️ [HOOK] Mensagem ignorada - sem autor válido')
+            return
+          }
+          
+          // 🔹 ATUALIZAR CACHE: Adicionar nova mensagem recebida
           queryClient.setQueryData(['channel-messages', channelId, workspaceId], (oldData: any) => {
             if (!oldData) return [newMessage]
             
-            // Check if message already exists
+            // 🔹 PREVENIR DUPLICADAS
             const exists = oldData.some((msg: any) => msg.id === newMessage.id)
             if (exists) {
-              console.log('🔔 useChannelMessages: Message already exists in cache, skipping duplicate')
+              console.log('⚠️ [HOOK] Mensagem já existe, pulando duplicata')
               return oldData
             }
             
-            // ✅ ADICIONADO: Remover duplicatas antes de adicionar nova mensagem
-            const uniqueOldData = oldData.filter((msg: any, index: number, self: any[]) => 
-              index === self.findIndex(m => m.id === msg.id)
-            )
+            console.log('✅ [HOOK] Adicionando mensagem ao cache:', newMessage.author.displayName)
+            console.log('✅ [HOOK] Cache agora tem:', oldData.length + 1, 'mensagens')
             
-            console.log('🔔 useChannelMessages: Updated cache for channel', channelId)
-            return [...uniqueOldData, newMessage]
+            return [...oldData, newMessage]
           })
         })
+        
+        console.log('✅ useChannelMessages: Subscription criada com sucesso!')
       } catch (error) {
-        console.error('🔔 useChannelMessages: Error setting up subscription:', error)
+        console.error('❌ useChannelMessages: Erro ao configurar subscription:', error)
       }
     }
     
+    // 🔹 INICIAR: Executar setup da subscription
     setupSubscription()
 
+    // 🔹 CLEANUP: Desinscrever apenas quando componente desmonta ou canal muda
     return () => {
-      console.log('🔔 useChannelMessages: Cleaning up subscription for channel', channelId)
+      console.log('🧹 useChannelMessages: Limpando subscription do canal', channelId)
       try {
         if (subscription && typeof subscription.unsubscribe === 'function') {
           subscription.unsubscribe()
-        } else {
-          console.log('🔔 useChannelMessages: Subscription unsubscribe method not available')
+          console.log('✅ useChannelMessages: Subscription cancelada')
         }
       } catch (error) {
-        console.error('🔔 useChannelMessages: Error unsubscribing from channel', channelId, error)
+        console.error('❌ useChannelMessages: Erro ao desinscrever:', error)
       }
     }
-  }, [channelId, queryClient, processNewMention, user])
+  }, [channelId, workspaceId, queryClient, user])
 
+  // 🔹 ENVIAR MENSAGEM: Mutation para enviar nova mensagem no canal
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
+      // 🔹 VALIDAÇÃO: Verificar se usuário está autenticado
       if (!user) throw new Error('User not authenticated')
       if (channelId === 'test-channel') throw new Error('Cannot send messages to test channel')
       
-      console.log('🔔 useChannelMessages: Sending message:', { content, channelId, userId: user.id })
+      console.log('🔔 useChannelMessages: Enviando mensagem:', { content, channelId, userId: user.id })
       
+      // 🔹 CHAMADA AO SERVIÇO: Enviar mensagem ao Supabase e obter retorno com dados completos
       const result = await messageService.sendMessage({
         content,
         author_id: user.id,
@@ -136,50 +153,68 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
         data_ai_hint: null
       })
       
-      console.log('🔔 useChannelMessages: Message sent successfully:', result)
+      console.log('🔔 useChannelMessages: Mensagem enviada com sucesso:', result)
       return result
     },
     onSuccess: (newMessage) => {
-      console.log('🔔 useChannelMessages: Message sent successfully, updating cache:', newMessage)
+      console.log('🔔 useChannelMessages: Mensagem enviada, atualizando cache local:', newMessage)
       
-      // ✅ ATUALIZAR CACHE IMEDIATAMENTE: Adicionar mensagem ao cache local
+      // 🔹 GARANTIR AUTHOR: Se a mensagem retornada não tiver o campo author (caso raro),
+      // injetar manualmente usando os dados do usuário autenticado
+      const messageWithAuthor = newMessage.author ? newMessage : {
+        ...newMessage,
+        author: {
+          id: user?.id || newMessage.authorId,
+          displayName: user?.user_metadata?.display_name || 'Usuário',
+          handle: user?.user_metadata?.handle || 'usuario',
+          avatarUrl: user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/40?u=default',
+          status: 'online' as const
+        }
+      }
+      
+      // 🔹 ATUALIZAR CACHE: Adicionar mensagem com dados completos do autor ao cache local
+      // Isso garante que nome e avatar apareçam imediatamente sem precisar recarregar a página
       queryClient.setQueryData(
         ['channel-messages', channelId, workspaceId],
         (oldData: any) => {
           if (!oldData) {
-            console.log('🔔 useChannelMessages: No old data, creating new array with message')
-            return [newMessage]
+            console.log('🔔 useChannelMessages: Cache vazio, criando array com nova mensagem')
+            return [messageWithAuthor]
           }
           
-          console.log('🔔 useChannelMessages: Updating cache with', oldData.length, 'existing messages')
+          console.log('🔔 useChannelMessages: Atualizando cache com', oldData.length, 'mensagens existentes')
           
-          // ✅ VERIFICAR: Se mensagem já existe
-          const exists = oldData.some((msg: any) => msg.id === newMessage.id)
+          // 🔹 PREVENIR DUPLICADAS: Verificar se mensagem já existe no cache
+          const exists = oldData.some((msg: any) => msg.id === messageWithAuthor.id)
           if (exists) {
-            console.log('🔔 useChannelMessages: Message already exists in cache, skipping duplicate')
+            console.log('🔔 useChannelMessages: Mensagem já existe no cache, pulando duplicata')
             return oldData
           }
           
-          // ✅ ADICIONADO: Remover duplicatas antes de adicionar nova mensagem
+          // 🔹 REMOVER DUPLICATAS: Garantir que não há mensagens duplicadas no cache antigo
           const uniqueOldData = oldData.filter((msg: any, index: number, self: any[]) => 
             index === self.findIndex(m => m.id === msg.id)
           )
           
-          console.log('🔔 useChannelMessages: Adding new message to cache. Total messages after update:', uniqueOldData.length + 1)
-          return [...uniqueOldData, newMessage]
+          console.log('🔔 useChannelMessages: Adicionando nova mensagem. Total após update:', uniqueOldData.length + 1)
+          
+          // 🔹 RETORNAR: Cache atualizado com nova mensagem incluindo dados do autor
+          return [...uniqueOldData, messageWithAuthor]
         }
       )
       
-      // ✅ COMENTADO: Não invalidar query para manter cache local
+      // 🔹 COMENTADO: Não invalidar query para manter cache local atualizado
+      // Invalidar causaria refetch do servidor e perdemos a atualização imediata
       // queryClient.invalidateQueries({ queryKey: ['channel-messages', channelId, workspaceId] })
     },
     onError: (error) => {
-      console.error('🔔 useChannelMessages: Error sending message:', error)
+      console.error('🔔 useChannelMessages: Erro ao enviar mensagem:', error)
     }
   })
 
-  // Return the data and other properties
+  // 🔹 TRANSFORMAR DADOS: Mapear mensagens e usuários para o formato esperado pelos componentes
   const result = {
+    // 🔹 MENSAGENS: Transformar mensagens para formato esperado pelo componente
     messages: (query.data || [])
       .map(msg => ({
         id: msg.id,
@@ -195,14 +230,16 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
           url: msg.attachmentUrl
         } : undefined,
         dataAiHint: msg.dataAiHint || undefined,
-        // ✅ ADICIONADO: Dados do autor incluídos diretamente da mensagem
+        // 🔹 AUTOR: Dados do autor incluídos diretamente da mensagem
+        // Isso permite que o nome e avatar apareçam sem fazer consultas adicionais
         author: msg.author
       }))
-      // ✅ ADICIONADO: Remover mensagens duplicadas baseadas no ID
+      // 🔹 REMOVER DUPLICATAS: Garantir que não há mensagens duplicadas baseadas no ID
       .filter((message, index, self) => 
         index === self.findIndex(m => m.id === message.id)
       ),
-    // ✅ CORRIGIDO: Mapear campos de usuários para o formato esperado
+    // 🔹 USUÁRIOS: Transformar lista de usuários para formato esperado pelos componentes
+    // Normalizar campos (snake_case -> camelCase) e fornecer valores padrão
     users: (usersQuery.data || []).map(user => ({
       id: user.id,
       displayName: user.display_name || user.displayName || 'Unknown User',
@@ -210,13 +247,15 @@ export function useChannelMessages(channelId: string, workspaceId?: string) {
       avatarUrl: user.avatar_url || user.avatarUrl || '',
       status: user.status || 'offline'
     })),
+    // 🔹 ESTADOS: Combinar estados de loading e erro de ambas as queries
     isLoading: query.isLoading || usersQuery.isLoading,
     error: query.error || usersQuery.error,
+    // 🔹 AÇÕES: Função para enviar mensagem e estado de envio
     sendMessage: sendMessage.mutateAsync,
     isSending: sendMessage.isPending,
   }
 
-  console.log('🚨🚨🚨 useChannelMessages: Returning result:', {
+  console.log('🚨🚨🚨 useChannelMessages: Retornando resultado:', {
     messageCount: result.messages.length,
     userCount: result.users.length,
     isLoading: result.isLoading,

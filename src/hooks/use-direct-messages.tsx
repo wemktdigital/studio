@@ -252,8 +252,19 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
           console.log('🚨🚨🚨 useDMMessages: REAL-TIME DM MESSAGE RECEIVED! 🚨🚨🚨', {
             messageId: newMessage.id,
             content: newMessage.content,
+            author: newMessage.author,
+            authorId: newMessage.author_id || newMessage.authorId,
+            authorDisplayName: newMessage.author?.displayName,
             timestamp: new Date().toISOString()
           });
+          
+          // ✅ VALIDAÇÃO SIMPLES: Verificar autor
+          if (!newMessage.author || !newMessage.author.displayName || newMessage.author.displayName.trim() === '') {
+            console.warn('⚠️ DM ignorada - sem autor válido')
+            return
+          }
+          
+          console.log('✅ DM válida recebida de:', newMessage.author.displayName)
 
           // Update cache
           queryClient.setQueryData(['dm-messages', dmId], (oldData: any) => {

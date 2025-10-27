@@ -87,6 +87,7 @@ export default function MessageItem({
   } = useReactions(message.id);
 
   // ✅ MEMOIZADO: Usar dados do autor diretamente da mensagem
+  // Esta é a lógica CRÍTICA para pegar o nome correto
   const author = useMemo(() => {
     console.log('🔍 MessageItem: Checking author data:', {
       messageId: message.id,
@@ -96,28 +97,35 @@ export default function MessageItem({
       users: users.map(u => ({ id: u.id, displayName: u.displayName }))
     })
     
-    // Se a mensagem já tem dados do autor, usar diretamente
+    // 🔹 PRIORIDADE 1: Se mensagem já tem dados do autor (vindo do Realtime hidratado), usar diretamente
     if (message.author) {
-      console.log('🔍 MessageItem: Using message.author:', message.author)
+      console.log('✅ MessageItem: Using message.author:', message.author)
       return message.author
     }
     
-    // Fallback: tentar encontrar nos usuários passados
+    // 🔹 PRIORIDADE 2: Tentar encontrar nos usuários passados como props
     const foundAuthor = users.find(u => u.id === message.authorId)
     console.log('🔍 MessageItem: Found author in users:', foundAuthor)
     return foundAuthor
   }, [message.author, users, message.authorId]);
   
   // ✅ VERIFICAR: Se o author foi encontrado, criar um autor padrão
+  // 🔹 MELHORIA: Usar displayName ou username do array users se não encontrar author
+  // 🚨 CRÍTICO: Este fallback só deve acontecer se mensagem não veio hidratada corretamente
   const displayAuthor = author || {
     id: message.authorId,
-    displayName: 'Usuário Desconhecido',
-    handle: 'unknown',
+    displayName: 'Usuário',  // Fallback temporário - será substituído quando dados chegarem
+    handle: 'usuario',
     avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
     status: 'offline' as const
   }
   
-  console.log('🔍 MessageItem: Final displayAuthor:', displayAuthor)
+  console.log('🔍 MessageItem: Final displayAuthor:', {
+    id: displayAuthor.id,
+    displayName: displayAuthor.displayName,
+    hasAuthor: !!author,
+    hasInUsers: !!users.find(u => u.id === message.authorId)
+  })
 
   // ✅ MEMOIZADO: Timestamp para evitar recálculos
   const timestamp = useMemo(() => {
