@@ -57,6 +57,15 @@ export default function MessageItem({
   conversation,
   workspaceId
 }: MessageItemProps) {
+  // ✅ CORREÇÃO CRÍTICA: Se author estiver vazio mas authorId existir, buscar dos users
+  // Isso corrige o problema do author: {} vindo do cache
+  if ((!message.author || Object.keys(message.author).length === 0) && message.authorId) {
+    const foundInUsers = users.find(u => u.id === message.authorId)
+    if (foundInUsers) {
+      message.author = foundInUsers
+    }
+  }
+  
   const [isClient, setIsClient] = useState(false);
   const [linkPreviews, setLinkPreviews] = useState<LinkPreview[]>([]);
   
@@ -98,9 +107,18 @@ export default function MessageItem({
     })
     
     // 🔹 PRIORIDADE 1: Se mensagem já tem dados do autor (vindo do Realtime hidratado), usar diretamente
-    if (message.author) {
-      console.log('✅ MessageItem: Using message.author:', message.author)
-      return message.author
+    // ✅ CORREÇÃO: Verificar se author existe E não está vazio
+    if (message.author && Object.keys(message.author).length > 0) {
+      // ✅ NORMALIZAR: Converter snake_case para camelCase se necessário
+      const normalizedAuthor = {
+        id: message.author.id || message.authorId,
+        displayName: message.author.displayName || (message.author as any).display_name || 'Usuário',
+        handle: message.author.handle || (message.author as any).username || 'usuario',
+        avatarUrl: message.author.avatarUrl || (message.author as any).avatar_url || 'https://i.pravatar.cc/40?u=default',
+        status: message.author.status || 'offline'
+      }
+      console.log('✅ MessageItem: Using message.author (normalized):', normalizedAuthor)
+      return normalizedAuthor
     }
     
     // 🔹 PRIORIDADE 2: Tentar encontrar nos usuários passados como props
@@ -112,12 +130,16 @@ export default function MessageItem({
   // ✅ VERIFICAR: Se o author foi encontrado, criar um autor padrão
   // 🔹 MELHORIA: Usar displayName ou username do array users se não encontrar author
   // 🚨 CRÍTICO: Este fallback só deve acontecer se mensagem não veio hidratada corretamente
-  const displayAuthor = author || {
-    id: message.authorId,
-    displayName: 'Usuário',  // Fallback temporário - será substituído quando dados chegarem
-    handle: 'usuario',
-    avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
-    status: 'offline' as const
+  let displayAuthor = author
+  if (!displayAuthor) {
+    console.warn('⚠️ MessageItem: No author found, creating fallback')
+    displayAuthor = {
+      id: message.authorId,
+      displayName: `Usuário ${message.authorId?.slice(0, 8) || 'Unknown'}`,
+      handle: 'usuario',
+      avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+      status: 'offline' as const
+    }
   }
   
   console.log('🔍 MessageItem: Final displayAuthor:', {

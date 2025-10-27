@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { useDMMessages } from '@/hooks/use-direct-messages'
 import MessageItem from './message'
@@ -15,46 +15,27 @@ interface DMMessageListProps {
   workspaceId: string
 }
 
-export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageListProps) {
-  console.log('🔍 DMMessageList: Component rendered with props:', { dmId, userId, workspaceId })
-  
+const DMMessageList = React.memo(function DMMessageList({ dmId, userId, workspaceId }: DMMessageListProps) {
   const { messages, isLoading, error } = useDMMessages(dmId)
-  
-  console.log('🔍 DMMessageList: useDMMessages returned:', { 
-    messages, 
-    isLoading, 
-    error, 
-    messagesLength: messages?.length,
-    messagesType: typeof messages,
-    messagesIsArray: Array.isArray(messages)
-  })
-  
-  // Detailed message inspection
-  if (messages && messages.length > 0) {
-    console.log('🔍 DMMessageList: First message details:', messages[0])
-    console.log('🔍 DMMessageList: All messages:', messages)
-  } else {
-    console.log('🔍 DMMessageList: No messages or empty array:', messages)
-  }
 
   // ✅ ADICIONADO: Extrair usuários únicos das mensagens
-  const users = React.useMemo(() => {
+  const users = useMemo(() => {
     if (!messages || messages.length === 0) return []
     
     const uniqueUsers = new Map()
-    messages.forEach(message => {
-      if (message.author) {
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i]
+      if (message.author && Object.keys(message.author).length > 0) {
         uniqueUsers.set(message.author.id, {
           id: message.author.id,
-          displayName: message.author.displayName,
+          displayName: message.author.displayName || message.author.display_name,
           handle: message.author.handle,
-          avatarUrl: message.author.avatarUrl,
+          avatarUrl: message.author.avatarUrl || message.author.avatar_url,
           status: message.author.status
         })
       }
-    })
+    }
     
-    console.log('🔍 DMMessageList: Extracted users:', Array.from(uniqueUsers.values()))
     return Array.from(uniqueUsers.values())
   }, [messages])
   
@@ -63,31 +44,18 @@ export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageLi
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
   // Group messages by date
-  const groupedMessages = React.useMemo(() => {
+  const groupedMessages = useMemo(() => {
     const groups: { [key: string]: any[] } = {}
     
-    messages.forEach((message) => {
-      // Validate and create date safely
-      let date: Date
-      try {
-        date = new Date(message.createdAt)
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-          console.warn('Invalid date for message:', message.id, message.createdAt)
-          date = new Date() // Fallback to current date
-        }
-      } catch (error) {
-        console.warn('Error parsing date for message:', message.id, message.createdAt, error)
-        date = new Date() // Fallback to current date
-      }
-      
-      const dateKey = format(date, 'yyyy-MM-dd')
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i]
+      const dateKey = format(new Date(message.createdAt), 'yyyy-MM-dd')
       
       if (!groups[dateKey]) {
         groups[dateKey] = []
       }
       groups[dateKey].push(message)
-    })
+    }
     
     return groups
   }, [messages])
@@ -100,20 +68,20 @@ export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageLi
   }, [messages])
 
   // Handle scroll events
-  const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = useCallback((event: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = event.currentTarget
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 100
     setShowScrollButton(!isNearBottom)
-  }
+  }, [])
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (scrollAreaRef.current) {
       const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
       if (scrollContainer) {
         scrollContainer.scrollTop = scrollContainer.scrollHeight
       }
     }
-  }
+  }, [])
 
   const formatDateHeader = (dateString: string) => {
     let date: Date
@@ -171,10 +139,10 @@ export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageLi
   }
 
   return (
-    <div className="flex-1 relative overflow-visible">
+    <div className="flex-1 flex flex-col h-full relative overflow-hidden">
       <ScrollArea 
         ref={scrollAreaRef}
-        className="h-full w-full overflow-visible"
+        className="flex-1 h-full"
         onScrollCapture={handleScroll}
       >
         <div className="p-4 space-y-4">
@@ -185,7 +153,7 @@ export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageLi
                 {/* Date separator */}
                 <div className="flex items-center gap-4">
                   <Separator className="flex-1" />
-                  <span className="text-xs text-muted-foreground bg-background px-2">
+                  <span className="text-xs text-muted-foreground bg-background px-2 whitespace-nowrap">
                     {formatDateHeader(dateKey)}
                   </span>
                   <Separator className="flex-1" />
@@ -196,7 +164,7 @@ export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageLi
                   <MessageItem
                     key={message.id}
                     message={message}
-                    users={users} // ✅ CORRIGIDO: Usar usuários extraídos das mensagens
+                    users={users}
                     conversation={{
                       id: dmId,
                       workspaceId: workspaceId,
@@ -222,11 +190,13 @@ export default function DMMessageList({ dmId, userId, workspaceId }: DMMessageLi
         <Button
           onClick={scrollToBottom}
           size="sm"
-          className="absolute bottom-4 right-4 rounded-full shadow-lg"
+          className="absolute bottom-4 right-4 rounded-full shadow-lg z-10"
         >
           ↓
         </Button>
       )}
     </div>
   )
-}
+})
+
+export default DMMessageList

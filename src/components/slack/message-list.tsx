@@ -89,20 +89,6 @@ const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
 
 export default function MessageList({ messages, users, conversation, workspaceId }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Debug log - VERY VISIBLE
-  console.log('🚨🚨🚨 MessageList: RENDERING NOW! 🚨🚨🚨', { 
-    messageCount: messages.length, 
-    usersCount: users.length,
-    conversationId: conversation?.id,
-    conversationName: conversation ? ('name' in conversation ? conversation.name : conversation.displayName) : 'Unknown',
-    workspaceId,
-    timestamp: new Date().toISOString(),
-    messages: messages, // Log the actual messages array
-    users: users, // Log the actual users array
-    firstMessage: messages[0],
-    firstUser: users[0]
-  });
 
   // ✅ AUTO-SCROLL: Scroll para a última mensagem quando novas mensagens chegam
   useEffect(() => {
@@ -112,7 +98,6 @@ export default function MessageList({ messages, users, conversation, workspaceId
   }, [messages]);
 
   if (messages.length === 0) {
-    console.log('🚨🚨🚨 MessageList: NO MESSAGES, showing empty state');
     return (
       <div className="flex h-full flex-1 flex-col items-center justify-center gap-4 p-8 text-center" data-testid="empty-message-list">
         <div className="rounded-full bg-muted p-4">
@@ -131,8 +116,6 @@ export default function MessageList({ messages, users, conversation, workspaceId
       </div>
     );
   }
-
-  console.log('🚨🚨🚨 MessageList: HAS MESSAGES, processing', messages.length, 'messages');
 
   // Group messages by date
   const groupedMessages = messages.reduce((groups, message) => {
@@ -160,30 +143,30 @@ export default function MessageList({ messages, users, conversation, workspaceId
     return groups;
   }, {} as Record<string, Message[]>);
 
-  console.log('🚨🚨🚨 MessageList: Grouped messages:', Object.keys(groupedMessages));
-
   return (
-    <ScrollArea className="flex-1 h-full">
-      <div className="p-4 space-y-4">
-        {Object.entries(groupedMessages).map(([dateKey, dateMessages]) => (
-          <div key={dateKey}>
-            <DateDivider date={new Date(dateKey)} />
-            <div className="space-y-4">
-              {dateMessages.map((message) => (
-                <MessageItem
-                  key={message.id}
-                  message={message}
-                  users={users}
-                  conversation={conversation}
-                  workspaceId={workspaceId}
-                />
-              ))}
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <ScrollArea className="flex-1 h-full">
+        <div className="p-4 space-y-4">
+          {Object.entries(groupedMessages).map(([dateKey, dateMessages]) => (
+            <div key={dateKey}>
+              <DateDivider date={new Date(dateKey)} />
+              <div className="space-y-4">
+                {dateMessages.map((message) => (
+                  <MessageItem
+                    key={message.id}
+                    message={message}
+                    users={users}
+                    conversation={conversation}
+                    workspaceId={workspaceId}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-        {/* ✅ AUTO-SCROLL: Referência para scroll automático */}
-        <div ref={messagesEndRef} />
-      </div>
-    </ScrollArea>
+          ))}
+          {/* ✅ AUTO-SCROLL: Referência para scroll automático */}
+          <div ref={messagesEndRef} />
+        </div>
+      </ScrollArea>
+    </div>
   );
 }

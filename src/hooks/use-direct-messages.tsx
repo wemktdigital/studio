@@ -141,13 +141,9 @@ export function useDirectMessages(workspaceId: string) {
 }
 
 export function useDMMessages(dmId: string, workspaceId?: string) {
-  console.log('🔍 useDMMessages: Hook called with dmId:', dmId)
-  
   const { user } = useAuthContext()
   const queryClient = useQueryClient()
   const { markAsRead } = useUnreadCounts('')
-
-  console.log('🔍 useDMMessages: User context:', { userId: user?.id, userExists: !!user })
 
   // ✅ USAR A MESMA LÓGICA DOS CANAIS: messageService.getDirectMessageMessages
   const {
@@ -158,42 +154,28 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
   } = useQuery({
     queryKey: ['dm-messages', dmId],
     queryFn: async () => {
-      if (!dmId) {
-        console.log('🔍 useDMMessages: No dmId provided, returning empty array')
-        return []
-      }
-      
-      console.log('🔍 useDMMessages: Fetching messages for DM:', dmId)
-      console.log('🔍 useDMMessages: Using messageService.getDirectMessageMessages (same as channels)')
+      if (!dmId) return []
       
       try {
-        // ✅ USAR MESSAGE SERVICE COMO OS CANAIS
         const { messageService } = await import('@/lib/services/message-service')
         const result = await messageService.getDirectMessageMessages(dmId, user?.id, workspaceId)
-        console.log('🔍 useDMMessages: messageService returned:', result)
-        console.log('🔍 useDMMessages: Result type:', typeof result)
-        console.log('🔍 useDMMessages: Result is array:', Array.isArray(result))
-        console.log('🔍 useDMMessages: Result length:', result?.length)
         return result
       } catch (err) {
-        console.error('🔍 useDMMessages: Error calling messageService:', err)
+        console.error('useDMMessages: Error:', err)
         throw err
       }
     },
     enabled: !!dmId,
-    staleTime: 0, // Sempre buscar dados frescos
+    staleTime: 30000, // 30 segundos
     retry: 2,
-    refetchOnWindowFocus: true, // Refetch quando a janela ganha foco
-    refetchOnMount: true, // Refetch quando o componente monta
-    gcTime: 0 // Sem cache para forçar sempre buscar dados frescos
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    gcTime: 5 * 60 * 1000 // 5 minutos
   })
-
-  console.log('🔍 useDMMessages: React Query state:', { messages, isLoading, error, messagesLength: messages?.length })
 
   // ✅ ADICIONADO: Garantir que as mensagens sejam carregadas após refresh
   useEffect(() => {
     if (dmId && !isLoading && !messages?.length) {
-      console.log('🔍 useDMMessages: No messages found after load, refetching...')
       refetch()
     }
   }, [dmId, isLoading, messages?.length, refetch])
@@ -203,21 +185,15 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
     mutationFn: async () => {
       if (!user?.id || !dmId) return
       
-      console.log('🔍 useDMMessages: Marking messages as read for DM:', dmId)
-      
       try {
-        // ✅ USAR DIRECT MESSAGE SERVICE para métodos que não existem no MessageService
         const { directMessageService } = await import('@/lib/services/direct-message-service')
         await directMessageService.markDirectMessageAsRead(dmId, user.id)
       } catch (err) {
-        console.error('🔍 useDMMessages: Error marking messages as read:', err)
+        console.error('Error marking messages as read:', err)
         throw err
       }
     },
     onSuccess: () => {
-      console.log('🔍 useDMMessages: Messages marked as read successfully')
-      
-      // Mark as read in the unread counts hook
       markAsRead(`dm-${dmId}`)
     },
     onError: (error: any) => {
@@ -249,26 +225,58 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
     const setupSubscription = async () => {
       try {
         subscription = await messageService.subscribeToDMMessages(dmId, (newMessage) => {
-          console.log('🚨🚨🚨 useDMMessages: REAL-TIME DM MESSAGE RECEIVED! 🚨🚨🚨', {
-            messageId: newMessage.id,
-            content: newMessage.content,
-            author: newMessage.author,
-            authorId: newMessage.author_id || newMessage.authorId,
-            authorDisplayName: newMessage.author?.displayName,
-            timestamp: new Date().toISOString()
-          });
+          console.log('🚨🚨🚨 useDMMessages: REAL-TIME DM MESSAGE RECEIVED! 🚨🚨🚨')
+          console.log('📦 newMessage completo:', JSON.stringify(newMessage, null, 2))
+          console.log('👤 newMessage.author:', newMessage.author)
+          console.log('👤 newMessage.author?.displayName:', newMessage.author?.displayName)
           
-          // ✅ VALIDAÇÃO SIMPLES: Verificar autor
-          if (!newMessage.author || !newMessage.author.displayName || newMessage.author.displayName.trim() === '') {
-            console.warn('⚠️ DM ignorada - sem autor válido')
+          // ✅ VALIDAÇÃO: Verificar se mensagem tem o mínimo necessário
+          if (!newMessage.id || !newMessage.content) {
+            console.warn('⚠️ DM ignorada - sem ID ou conteúdo')
             return
           }
           
+          // ✅ SE NÃO TEM AUTHOR OU AUTHOR VAZIO, BUSCAR DOS DADOS DO USUÁRIO
+          if (!newMessage.author || Object.keys(newMessage.author).length === 0) {
+            console.warn('⚠️ DM sem autor ou com autor vazio, tentando encontrar nos dados da mensagem')
+            
+            // Tentar extrair dados do autor dos campos da mensagem
+            const authorId = newMessage.author_id || newMessage.authorId || newMessage.author?.id
+            const displayName = (newMessage as any).display_name || newMessage.author?.displayName || (newMessage as any).displayName
+            const username = (newMessage as any).username
+            const handle = (newMessage as any).handle
+            
+            console.log('🔍 Tentando criar author:', { authorId, displayName, username, handle, authorFromMessage: newMessage.author })
+            
+            // Se tiver algum dado do autor, criar objeto
+            if (authorId && (displayName || username || handle)) {
+              newMessage.author = {
+                id: authorId,
+                displayName: displayName || username || handle || 'Usuário',
+                handle: handle || username || 'usuario',
+                avatarUrl: (newMessage as any).avatar_url || newMessage.author?.avatarUrl || (newMessage as any).avatarUrl || 'https://i.pravatar.cc/40?u=default',
+                status: ((newMessage as any).status || newMessage.author?.status || 'offline') as 'online' | 'offline' | 'away'
+              }
+              console.log('✅ Author criado com sucesso:', newMessage.author)
+            } else {
+              console.error('❌ DM sem dados do autor suficientes:', { authorId, displayName, username, handle })
+              // Não adicionar ao cache se não tiver dados mínimos
+              return
+            }
+          }
+          
           console.log('✅ DM válida recebida de:', newMessage.author.displayName)
+          console.log('📦 DM completa ANTES do cache:', JSON.stringify(newMessage, null, 2))
 
           // Update cache
           queryClient.setQueryData(['dm-messages', dmId], (oldData: any) => {
-            if (!oldData) return [newMessage]
+            console.log('🔔 useDMMessages: Atualizando cache, oldData length:', oldData?.length)
+            
+            if (!oldData) {
+              console.log('🔔 useDMMessages: Primeira mensagem, criando array')
+              console.log('📦 NOVA MENSAGEM NO CACHE:', JSON.stringify(newMessage, null, 2))
+              return [newMessage]
+            }
 
             // Check if message already exists
             const exists = oldData.some((msg: any) => msg.id === newMessage.id)
@@ -282,8 +290,14 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
               index === self.findIndex(m => m.id === msg.id)
             )
 
+            const newData = [...uniqueOldData, newMessage]
             console.log('🔔 useDMMessages: Updated cache for DM', dmId)
-            return [...uniqueOldData, newMessage]
+            console.log('📦 NOVA MENSAGEM NO FINAL DO ARRAY:', JSON.stringify(newMessage, null, 2))
+            console.log('📦 ARRAY COMPLETO NO CACHE:', JSON.stringify(newData.map(m => ({ id: m.id, author: m.author?.displayName || 'SEM AUTOR' })), null, 2))
+            console.log('🔍 NEWMESSAGE.AUTHOR NO CACHE:', JSON.stringify(newMessage.author, null, 2))
+            console.log('🔍 NEWMESSAGE.AUTHOR.ID:', newMessage.author?.id)
+            console.log('🔍 NEWMESSAGE.AUTHOR.DISPLAYNAME:', newMessage.author?.displayName)
+            return newData
           })
         })
       } catch (error) {
@@ -403,9 +417,9 @@ export function useDMMessages(dmId: string, workspaceId?: string) {
       dataAiHint: msg.data_ai_hint || undefined,
       author: msg.author ? {
         id: msg.author.id,
-        displayName: msg.author.display_name || msg.author.username || 'Usuário Desconhecido',
+        displayName: msg.author.displayName || msg.author.display_name || msg.author.username || 'Usuário Desconhecido',
         handle: msg.author.handle || msg.author.username || 'unknown',
-        avatarUrl: msg.author.avatar_url || '',
+        avatarUrl: msg.author.avatarUrl || msg.author.avatar_url || '',
         status: msg.author.status || 'online'
       } : {
         id: msg.author_id || 'unknown',

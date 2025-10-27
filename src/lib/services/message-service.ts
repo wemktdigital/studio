@@ -275,7 +275,6 @@ export class MessageService {
         
         // ✅ BUSCAR: Dados dos usuários que enviaram mensagens
         const authorIds = [...new Set(uniqueMessages.map(msg => msg.author_id))]
-        console.log('MessageService: Fetching user data for authors:', authorIds)
         
         const { data: usersData, error: usersError } = await this.supabase
           .from('users')
@@ -283,20 +282,15 @@ export class MessageService {
           .in('id', authorIds)
         
         if (usersError) {
-          console.error('MessageService: Error fetching users:', usersError)
+          console.error('❌ MessageService: Error fetching users:', usersError)
         }
-        
-        console.log('MessageService: Found users:', usersData?.length || 0, 'users')
         
         // ✅ TRANSFORMAR: Converter snake_case para camelCase E incluir dados do autor
         const transformedMessages = uniqueMessages.map(msg => {
           // Buscar dados do autor
           const author = usersData?.find(u => u.id === msg.author_id)
           
-          if (!author) {
-            console.warn('MessageService: Author not found for message:', msg.id, 'author_id:', msg.author_id)
-            console.warn('MessageService: Available users:', usersData?.map(u => ({ id: u.id, display_name: u.display_name })) || [])
-          }
+
           
           const authorData = author || {
             id: msg.author_id,
@@ -306,7 +300,16 @@ export class MessageService {
             status: 'offline'
           }
 
-          return {
+          console.log('🔍 MessageService: Transforming DM message:', {
+            messageId: msg.id,
+            authorId: msg.author_id,
+            authorFound: !!author,
+            authorData: author,
+            authorData_displayName: author?.display_name,
+            authorData_username: author?.username
+          })
+
+          const transformedMessage = {
             id: msg.id,
             content: msg.content,
             type: msg.type,
@@ -319,21 +322,28 @@ export class MessageService {
             attachmentUrl: msg.attachment_url,
             dataAiHint: msg.data_ai_hint,
             reactions: [], // Inicializar array vazio
-            // ✅ ADICIONADO: Dados do autor
+            // ✅ ADICIONADO: Dados do autor em camelCase
             author: {
               id: authorData.id,
-              display_name: authorData.display_name,
-              username: authorData.username,
-              avatar_url: authorData.avatar_url,
-              status: authorData.status
+              displayName: authorData.display_name || authorData.username || authorData.handle || `Usuário ${msg.author_id.slice(0, 8)}`,
+              handle: authorData.handle || authorData.username || 'usuario',
+              avatarUrl: authorData.avatar_url || 'https://i.pravatar.cc/40?u=default',
+              status: authorData.status || 'offline'
             }
           }
+
+          console.log('🔍 MessageService: Transformed DM message:', {
+            messageId: transformedMessage.id,
+            author_displayName: transformedMessage.author.displayName,
+            author_id: transformedMessage.author.id
+          })
+
+          return transformedMessage
         })
         
-        console.log('MessageService: Returning DM messages - Base:', data.length, 'Unique:', uniqueMessages.length, 'Transformed:', transformedMessages.length)
-        console.log('MessageService: Users data found:', usersData.length, 'users')
-        console.log('MessageService: Sample transformed message:', transformedMessages[0])
-        console.log('MessageService: Transformed messages:', transformedMessages)
+        console.log('MessageService: Returning', transformedMessages.length, 'DM messages')
+        console.log('🔍 MessageService: ALL TRANSFORMED MESSAGES:', JSON.stringify(transformedMessages.map(m => ({ id: m.id, author: m.author?.displayName || 'SEM AUTOR' })), null, 2))
+        
         return transformedMessages
       }
 
@@ -1181,7 +1191,7 @@ export class MessageService {
       console.log('🚨🚨🚨 MessageService: Session user ID:', session.user.id)
       
       // ✅ TENTATIVA: Criar subscription com timeout
-      const channel = this.supabase.channel(`dm:${dmId}`)
+      const channel = this.supabase.channel(`realtime:dm:${dmId}`)
       
       const subscription = channel
         .on(
@@ -1192,14 +1202,58 @@ export class MessageService {
             table: 'messages',
             filter: `dm_id=eq.${dmId}`
           },
-          (payload: any) => {
+          async (payload: any) => {
             console.log('🚨🚨🚨 MessageService: REAL-TIME DM MESSAGE RECEIVED! 🚨🚨🚨', {
               dmId,
               messageId: payload.new?.id,
               content: payload.new?.content,
+              authorId: payload.new?.author_id,
               timestamp: new Date().toISOString()
-            });
-            callback(payload.new as Message)
+            })
+            
+            // ✅ BUSCAR DADOS DO AUTOR
+            try {
+              const { data: userData, error: userError } = await this.supabase
+                .from('users')
+                .select('id, display_name, username, handle, avatar_url, status')
+                .eq('id', payload.new.author_id)
+                .single()
+              
+              console.log('🔍 [DM REALTIME] Autor encontrado:', { 
+                displayName: userData?.display_name,
+                username: userData?.username,
+                hasData: !!userData,
+                error: userError?.message 
+              })
+              
+              // ✅ CRIAR MENSAGEM COM DADOS DO AUTOR
+              const messageWithAuthor = {
+                ...payload.new,
+                authorId: payload.new.author_id, // ✅ GARANTIR que authorId está presente
+                author: userData ? {
+                  id: userData.id,
+                  displayName: userData.display_name || userData.username || userData.handle || `Usuário ${payload.new.author_id.slice(0, 8)}`,
+                  handle: userData.handle || userData.username || 'usuario',
+                  avatarUrl: userData.avatar_url || 'https://i.pravatar.cc/40?u=default',
+                  status: userData.status || 'offline'
+                } : {
+                  id: payload.new.author_id,
+                  displayName: `Usuário ${payload.new.author_id.slice(0, 8)}`,
+                  handle: `user_${payload.new.author_id.slice(0, 8)}`,
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
+              }
+              
+              console.log('✅ [DM REALTIME] Enviando mensagem com autor:', messageWithAuthor.author.displayName)
+              console.log('📤 [DM REALTIME] Payload completo:', JSON.stringify(messageWithAuthor, null, 2))
+              console.log('📤 [DM REALTIME] UserData completo:', JSON.stringify(userData, null, 2))
+              callback(messageWithAuthor as Message)
+            } catch (error) {
+              console.error('❌ [DM REALTIME] Erro ao buscar autor:', error)
+              // Enviar mensagem mesmo sem dados do autor
+              callback(payload.new as Message)
+            }
           }
         )
         .subscribe((status: any) => {
@@ -1331,36 +1385,75 @@ export class MessageService {
         
         console.log('🔄 MessageService: Polling result:', { messagesCount: messages?.length || 0, originalDmId: dmId, realDmId: realDmId })
         
-        if (messages && messages.length > 0) {
+                  if (messages && messages.length > 0) {
           const latestMessage = messages[0]
           if (!lastMessageId || latestMessage.id !== lastMessageId) {
             lastMessageId = latestMessage.id
             console.log('🔄 MessageService: New DM message found via polling:', latestMessage.id)
             
-            // ✅ CORREÇÃO: Transformar mensagem antes de chamar callback
-            const transformedMessage = {
-              id: latestMessage.id,
-              content: latestMessage.content,
-              type: latestMessage.type,
-              authorId: latestMessage.author_id,
-              channelId: latestMessage.channel_id,
-              dmId: latestMessage.dm_id,
-              createdAt: latestMessage.created_at,
-              updatedAt: latestMessage.updated_at,
-              attachmentName: latestMessage.attachment_name,
-              attachmentUrl: latestMessage.attachment_url,
-              dataAiHint: latestMessage.data_ai_hint,
-              reactions: [],
-              author: {
-                id: latestMessage.author_id,
-                display_name: `Usuário ${latestMessage.author_id?.slice(0, 8) || 'Unknown'}`,
-                username: `user_${latestMessage.author_id?.slice(0, 8) || 'unknown'}`,
-                avatar_url: null,
-                status: 'online'
+            // ✅ BUSCAR DADOS DO AUTOR
+            try {
+              const { data: userData, error: userError } = await this.supabase
+                .from('users')
+                .select('id, display_name, username, handle, avatar_url, status')
+                .eq('id', latestMessage.author_id)
+                .single()
+              
+              console.log('🔍 [POLLING DM] Autor encontrado:', { 
+                displayName: userData?.display_name,
+                username: userData?.username,
+                hasData: !!userData,
+                error: userError?.message 
+              })
+              
+              // ✅ CRIAR MENSAGEM COM DADOS DO AUTOR
+              const transformedMessage: MessageWithAuthor = {
+                id: latestMessage.id,
+                content: latestMessage.content,
+                type: latestMessage.type,
+                authorId: latestMessage.author_id,
+                channelId: latestMessage.channel_id,
+                dmId: latestMessage.dm_id,
+                createdAt: latestMessage.created_at,
+                updatedAt: latestMessage.updated_at,
+                attachmentName: latestMessage.attachment_name,
+                attachmentUrl: latestMessage.attachment_url,
+                dataAiHint: latestMessage.data_ai_hint,
+                reactions: [],
+                author: userData ? {
+                  id: userData.id,
+                  displayName: userData.display_name || userData.username || userData.handle || `Usuário ${latestMessage.author_id.slice(0, 8)}`,
+                  handle: userData.handle || userData.username || 'usuario',
+                  avatarUrl: userData.avatar_url || 'https://i.pravatar.cc/40?u=default',
+                  status: userData.status || 'offline'
+                } : {
+                  id: latestMessage.author_id,
+                  displayName: `Usuário ${latestMessage.author_id.slice(0, 8)}`,
+                  handle: `user_${latestMessage.author_id.slice(0, 8)}`,
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
               }
+              
+              console.log('✅ [POLLING DM] Enviando mensagem com autor:', transformedMessage.author.displayName)
+              console.log('📤 [POLLING DM] Payload completo:', JSON.stringify(transformedMessage, null, 2))
+              console.log('📤 [POLLING DM] UserData:', JSON.stringify(userData, null, 2))
+              callback(transformedMessage as Message)
+            } catch (error) {
+              console.error('❌ [POLLING DM] Erro ao buscar autor:', error)
+              // Enviar mensagem mesmo sem dados do autor
+              const transformedMessage = {
+                ...latestMessage,
+                author: {
+                  id: latestMessage.author_id,
+                  displayName: 'Usuário Desconhecido',
+                  handle: 'unknown',
+                  avatarUrl: 'https://i.pravatar.cc/40?u=unknown',
+                  status: 'offline' as const
+                }
+              }
+              callback(transformedMessage as Message)
             }
-            
-            callback(transformedMessage as Message)
           }
         }
       } catch (error) {
