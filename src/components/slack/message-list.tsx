@@ -90,6 +90,16 @@ const EmptyChannelWelcome = ({ channel }: { channel: Channel }) => {
 export default function MessageList({ messages, users, conversation, workspaceId }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // ✅ DEBUG: Log para ver quantas mensagens estão chegando
+  useEffect(() => {
+    console.log('📋 MessageList: Recebeu', messages.length, 'mensagens')
+    if (messages.length > 0) {
+      console.log('📋 MessageList: IDs das mensagens:', messages.map(m => m.id).join(', '))
+      console.log('📋 MessageList: Primeira mensagem:', messages[0]?.id, 'Criada em:', messages[0]?.createdAt)
+      console.log('📋 MessageList: Última mensagem:', messages[messages.length - 1]?.id, 'Criada em:', messages[messages.length - 1]?.createdAt)
+    }
+  }, [messages]);
+
   // ✅ AUTO-SCROLL: Scroll para a última mensagem quando novas mensagens chegam
   useEffect(() => {
     if (messagesEndRef.current) {

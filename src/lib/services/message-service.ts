@@ -550,12 +550,13 @@ export class MessageService {
         console.log('MessageService: Using real channel ID:', realChannelId, 'for mock ID:', channelId)
         
         // ✅ CORREÇÃO: Primeiro tentar query simples sem JOIN para verificar se há mensagens
+        // ✅ AUMENTADO: Limite de 100 para 1000 para garantir que todas as mensagens sejam carregadas
         const { data: simpleData, error: simpleError } = await this.supabase
           .from('messages')
           .select('id, content, author_id, channel_id, created_at, updated_at, type')
           .eq('channel_id', realChannelId)
           .order('created_at', { ascending: true })
-          .limit(100)
+          .limit(1000) // ✅ AUMENTADO: De 100 para 1000 mensagens
 
         if (simpleError) {
           console.error('Error fetching channel messages (simple query):', {
