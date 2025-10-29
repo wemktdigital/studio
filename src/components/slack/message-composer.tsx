@@ -163,8 +163,8 @@ export default function MessageComposer({ conversation, channelId, workspaceId }
   };
 
   return (
-    <div className="relative border-t bg-background p-4">
-      <form onSubmit={handleSendMessage} className="flex gap-3">
+    <div className="relative border-t bg-background p-2 md:p-4">
+      <form onSubmit={handleSendMessage} className="flex gap-2 md:gap-3">
         <div className="flex-1 relative">
           <Textarea
             ref={textareaRef}
@@ -172,7 +172,7 @@ export default function MessageComposer({ conversation, channelId, workspaceId }
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="min-h-[44px] max-h-32 resize-none pr-8"
+            className="min-h-[44px] max-h-32 resize-none pr-8 md:pr-12 text-base"
             disabled={isSending}
           />
           
@@ -197,8 +197,13 @@ export default function MessageComposer({ conversation, channelId, workspaceId }
           )}
         </div>
         
-        <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={!text.trim() || isSending}>
+        <div className="flex gap-1 md:gap-2">
+          <Button 
+            type="submit" 
+            size="sm" 
+            disabled={!text.trim() || isSending}
+            className="h-[44px] w-[44px] md:h-auto md:w-auto"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>

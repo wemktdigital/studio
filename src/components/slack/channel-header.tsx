@@ -44,25 +44,25 @@ export default function ChannelHeader({ conversation, workspaceId }: ChannelHead
 
   return (
     <>
-      <header className="flex h-16 shrink-0 items-center justify-between border-b px-6" data-testid="channel-header">
-        <div className="flex items-center gap-3">
+      <header className="flex h-14 md:h-16 shrink-0 items-center justify-between border-b px-3 md:px-6" data-testid="channel-header">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
           {isChannel ? (
-            <Hash className="h-6 w-6 text-muted-foreground" />
+            <Hash className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground flex-shrink-0" />
           ) : (
-            <UserAvatar user={conversation} className="h-8 w-8" />
+            <UserAvatar user={conversation} className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0" />
           )}
-          <div className="flex flex-col">
-            <h2 className="text-lg font-bold">{isChannel ? conversation.name : conversation.displayName}</h2>
+          <div className="flex flex-col min-w-0">
+            <h2 className="text-base md:text-lg font-bold truncate">{isChannel ? conversation.name : conversation.displayName}</h2>
             {isChannel && (
-              <p className="text-xs text-muted-foreground">
+              <p className="hidden md:block text-xs text-muted-foreground truncate">
                 {conversation.description || `Canal ${conversation.name}`}
               </p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
           {isChannel && allUsers && allUsers.length > 0 && (
-            <div className="flex -space-x-2 overflow-hidden">
+            <div className="hidden md:flex -space-x-2 overflow-hidden">
               {allUsers.slice(0, 2).map(user => (
                 <UserAvatar key={user.id} user={user} className="h-7 w-7 border-2 border-background" />
               ))}
@@ -73,19 +73,26 @@ export default function ChannelHeader({ conversation, workspaceId }: ChannelHead
               }
             </div>
           )}
-          <Separator orientation="vertical" className="h-6" />
+          <Separator orientation="vertical" className="h-6 hidden md:block" />
           {isChannel && (
             <Button 
               variant="ghost" 
               size="icon" 
               aria-label="Search messages" 
               onClick={handleSearchClick}
+              className="h-9 w-9 md:h-10 md:w-10"
             >
-              <Search className="h-5 w-5" />
+              <Search className="h-4 w-4 md:h-5 md:w-5" />
             </Button>
           )}
-          <Button variant="ghost" size="icon" aria-label="View conversation details" onClick={handleInfoClick}>
-            <Info className="h-5 w-5" />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            aria-label="View conversation details" 
+            onClick={handleInfoClick}
+            className="h-9 w-9 md:h-10 md:w-10"
+          >
+            <Info className="h-4 w-4 md:h-5 md:w-5" />
           </Button>
         </div>
       </header>

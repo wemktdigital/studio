@@ -250,8 +250,13 @@ export function useAuth() {
       console.error('useAuth.resetPassword: Supabase client not available')
       return { error: { message: 'Client not available' } }
     }
+    
+    // Usar NEXT_PUBLIC_SITE_URL se disponível, senão usar window.location.origin
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '')
+    const redirectTo = `${siteUrl}/auth/reset-password`
+    
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo,
     })
     return { error }
   }

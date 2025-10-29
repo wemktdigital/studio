@@ -156,7 +156,7 @@ export default function MessageList({ messages, users, conversation, workspaceId
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden">
       <ScrollArea className="flex-1 h-full">
-        <div className="p-4 space-y-4">
+        <div className="p-2 md:p-4 space-y-4">
           {Object.entries(groupedMessages).map(([dateKey, dateMessages]) => (
             <div key={dateKey}>
               <DateDivider date={new Date(dateKey)} />

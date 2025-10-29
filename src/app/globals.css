@@ -4,76 +4,76 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* #FFFFFF - Branco */
-    --foreground: 0 0% 0%; /* #000000 - Preto */
-    --card: 0 0% 100%; /* #FFFFFF - Branco */
-    --card-foreground: 0 0% 0%; /* #000000 - Preto */
-    --popover: 0 0% 100%; /* #FFFFFF - Branco */
-    --popover-foreground: 0 0% 0%; /* #000000 - Preto */
-    --primary: 188 79% 56%; /* #29CEDF - Ciano */
-    --primary-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --secondary: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --secondary-foreground: 0 0% 0%; /* #000000 - Preto */
-    --muted: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --muted-foreground: 0 0% 20%; /* #333333 - Cinza escuro */
-    --accent: 147 64% 47%; /* #25D366 - Verde */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --border: 0 0% 91%; /* Baseado em #F5F5F5 */
-    --input: 0 0% 91%; /* Baseado em #F5F5F5 */
-    --ring: 188 79% 56%; /* #29CEDF - Ciano */
+    --background: 200 40% 98%; /* #F0F8FF - Azul bebê muito claro */
+    --foreground: 200 30% 15%; /* #1a2b3c - Azul escuro */
+    --card: 200 35% 99%; /* #F5FBFF - Azul bebê claro */
+    --card-foreground: 200 30% 15%; /* #1a2b3c - Azul escuro */
+    --popover: 200 35% 99%; /* #F5FBFF - Azul bebê claro */
+    --popover-foreground: 200 30% 15%; /* #1a2b3c - Azul escuro */
+    --primary: 180 90% 50%; /* #00D9FF - Ciano vibrante */
+    --primary-foreground: 200 40% 98%; /* #F0F8FF - Branco azulado */
+    --secondary: 200 60% 92%; /* #C8E5FF - Azul bebê */
+    --secondary-foreground: 200 40% 20%; /* #2d4252 - Azul escuro */
+    --muted: 200 45% 94%; /* #DCF0FF - Azul bebê suave */
+    --muted-foreground: 200 25% 35%; /* #4a5c6b - Azul acinzentado */
+    --accent: 175 85% 55%; /* #1DDDD8 - Ciano azulado */
+    --accent-foreground: 200 40% 98%; /* #F0F8FF - Branco azulado */
+    --destructive: 0 84.2% 60.2%; /* Vermelho mantido para erros */
+    --destructive-foreground: 200 40% 98%; /* Branco azulado */
+    --border: 200 50% 88%; /* #B8DDFF - Azul bebê médio */
+    --input: 200 50% 95%; /* #E5F3FF - Azul bebê muito claro */
+    --ring: 180 90% 50%; /* #00D9FF - Ciano vibrante */
     --radius: 0.5rem;
-    --chart-1: 188 79% 56%; /* #29CEDF - Ciano */
-    --chart-2: 147 64% 47%; /* #25D366 - Verde */
-    --chart-3: 0 0% 20%; /* #333333 - Cinza escuro */
-    --chart-4: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --chart-5: 0 0% 0%; /* #000000 - Preto */
+    --chart-1: 180 90% 50%; /* #00D9FF - Ciano */
+    --chart-2: 190 80% 55%; /* #0AC9E8 - Ciano azulado */
+    --chart-3: 200 60% 70%; /* #7FD1FF - Azul bebê */
+    --chart-4: 200 40% 85%; /* #C8E5FF - Azul bebê claro */
+    --chart-5: 200 30% 50%; /* #6B9FC7 - Azul médio */
     
     /* Sidebar colors */
-    --sidebar-background: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --sidebar-foreground: 0 0% 20%; /* #333333 - Cinza escuro */
-    --sidebar-primary: 188 79% 56%; /* #29CEDF - Ciano */
-    --sidebar-primary-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --sidebar-accent: 147 64% 47%; /* #25D366 - Verde */
-    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --sidebar-border: 0 0% 91%; /* Baseado em #F5F5F5 */
+    --sidebar-background: 200 50% 96%; /* #E8F5FF - Azul bebê claro */
+    --sidebar-foreground: 200 30% 20%; /* #2d4252 - Azul escuro */
+    --sidebar-primary: 180 90% 50%; /* #00D9FF - Ciano vibrante */
+    --sidebar-primary-foreground: 200 40% 98%; /* #F0F8FF - Branco azulado */
+    --sidebar-accent: 175 85% 55%; /* #1DDDD8 - Ciano azulado */
+    --sidebar-accent-foreground: 200 40% 98%; /* #F0F8FF - Branco azulado */
+    --sidebar-border: 200 50% 88%; /* #B8DDFF - Azul bebê médio */
   }
 
   .dark {
-    --background: 0 0% 0%; /* #000000 - Preto */
-    --foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --card: 0 0% 5%; /* Preto mais claro */
-    --card-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --popover: 0 0% 5%; /* Preto mais claro */
-    --popover-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --primary: 188 79% 56%; /* #29CEDF - Ciano */
-    --primary-foreground: 0 0% 0%; /* #000000 - Preto */
-    --secondary: 0 0% 20%; /* #333333 - Cinza escuro */
-    --secondary-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --muted: 0 0% 20%; /* #333333 - Cinza escuro */
-    --muted-foreground: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --accent: 147 64% 47%; /* #25D366 - Verde */
-    --accent-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --border: 0 0% 20%; /* #333333 - Cinza escuro */
-    --input: 0 0% 20%; /* #333333 - Cinza escuro */
-    --ring: 188 79% 56%; /* #29CEDF - Ciano */
-    --chart-1: 188 79% 56%; /* #29CEDF - Ciano */
-    --chart-2: 147 64% 47%; /* #25D366 - Verde */
-    --chart-3: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --chart-4: 0 0% 20%; /* #333333 - Cinza escuro */
-    --chart-5: 0 0% 100%; /* #FFFFFF - Branco */
+    --background: 200 35% 8%; /* #0a1419 - Azul muito escuro */
+    --foreground: 200 20% 92%; /* #E8F0F5 - Azul bebê muito claro */
+    --card: 200 30% 10%; /* #0d1921 - Azul escuro */
+    --card-foreground: 200 20% 92%; /* #E8F0F5 - Azul bebê muito claro */
+    --popover: 200 30% 10%; /* #0d1921 - Azul escuro */
+    --popover-foreground: 200 20% 92%; /* #E8F0F5 - Azul bebê muito claro */
+    --primary: 180 85% 55%; /* #0DD3E8 - Ciano mais brilhante */
+    --primary-foreground: 200 35% 8%; /* #0a1419 - Azul muito escuro */
+    --secondary: 200 40% 15%; /* #1a2835 - Azul escuro */
+    --secondary-foreground: 200 20% 92%; /* #E8F0F5 - Azul bebê muito claro */
+    --muted: 200 35% 18%; /* #253341 - Azul acinzentado */
+    --muted-foreground: 200 15% 75%; /* #B8C5D0 - Azul acinzentado claro */
+    --accent: 175 75% 60%; /* #2AE8E0 - Ciano azulado brilhante */
+    --accent-foreground: 200 35% 8%; /* #0a1419 - Azul muito escuro */
+    --destructive: 0 62.8% 30.6%; /* Vermelho mantido para erros */
+    --destructive-foreground: 200 20% 92%; /* #E8F0F5 - Branco azulado */
+    --border: 200 35% 22%; /* #2d3f4f - Azul acinzentado */
+    --input: 200 35% 18%; /* #253341 - Azul acinzentado */
+    --ring: 180 85% 55%; /* #0DD3E8 - Ciano brilhante */
+    --chart-1: 180 85% 55%; /* #0DD3E8 - Ciano */
+    --chart-2: 190 75% 60%; /* #1AD9F0 - Ciano azulado */
+    --chart-3: 200 50% 40%; /* #5A9FCC - Azul médio */
+    --chart-4: 200 35% 25%; /* #3d5567 - Azul acinzentado */
+    --chart-5: 200 20% 70%; /* #A8BDD0 - Azul claro */
     
     /* Sidebar colors */
-    --sidebar-background: 0 0% 10%; /* Preto mais claro */
-    --sidebar-foreground: 0 0% 96%; /* #F5F5F5 - Cinza claro */
-    --sidebar-primary: 188 79% 56%; /* #29CEDF - Ciano */
-    --sidebar-primary-foreground: 0 0% 0%; /* #000000 - Preto */
-    --sidebar-accent: 147 64% 47%; /* #25D366 - Verde */
-    --sidebar-accent-foreground: 0 0% 100%; /* #FFFFFF - Branco */
-    --sidebar-border: 0 0% 20%; /* #333333 - Cinza escuro */
+    --sidebar-background: 200 40% 12%; /* #152029 - Azul muito escuro */
+    --sidebar-foreground: 200 20% 88%; /* #D8E5F0 - Azul bebê claro */
+    --sidebar-primary: 180 85% 55%; /* #0DD3E8 - Ciano brilhante */
+    --sidebar-primary-foreground: 200 35% 8%; /* #0a1419 - Azul muito escuro */
+    --sidebar-accent: 175 75% 60%; /* #2AE8E0 - Ciano azulado */
+    --sidebar-accent-foreground: 200 35% 8%; /* #0a1419 - Azul muito escuro */
+    --sidebar-border: 200 35% 22%; /* #2d3f4f - Azul acinzentado */
   }
 }
 
@@ -150,5 +150,42 @@
     @apply fixed bottom-4 right-4 z-[60] max-w-sm bg-background;
     @apply border border-border rounded-lg shadow-lg p-4;
     @apply transform transition-all duration-200 ease-in-out;
+  }
+}
+
+/* ✅ MOBILE: Otimizações para dispositivos móveis */
+@media (max-width: 768px) {
+  /* Áreas de toque mínimas para botões interativos */
+  button:not([data-nomobile]),
+  a[role="button"],
+  [role="button"]:not([data-nomobile]) {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+  }
+  
+  /* Prevenir zoom indesejado em inputs (iOS) */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important;
+  }
+  
+  /* Scroll suave para iOS */
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Melhorar textos em mobile */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Remover tap highlight */
+  * {
+    -webkit-tap-highlight-color: transparent;
   }
 }
