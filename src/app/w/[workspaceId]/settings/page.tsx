@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast'
 import { messageRetentionService } from '@/lib/services/message-retention-service'
 import { useWorkspaceUsersAdmin } from '@/hooks/use-workspace-users-admin'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 
 export default function WorkspaceSettingsPage() {
   const params = useParams()
@@ -402,20 +403,15 @@ export default function WorkspaceSettingsPage() {
     }
   }
 
+  const { copy } = useCopyToClipboard()
+
   const handleCopyInviteLink = async () => {
     if (sharedInviteLink) {
-      try {
-        await navigator.clipboard.writeText(sharedInviteLink)
+      const success = await copy(sharedInviteLink)
+      if (success) {
         toast({
           title: "Link copiado!",
           description: "Link de convite copiado para a área de transferência.",
-        })
-      } catch (error) {
-        console.error('❌ Erro ao copiar link:', error)
-        toast({
-          title: "Erro",
-          description: "Não foi possível copiar o link.",
-          variant: "destructive"
         })
       }
     }

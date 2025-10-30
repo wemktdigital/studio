@@ -337,7 +337,7 @@ class AdminService {
   /**
    * Vincula um usuário a um workspace
    */
-  async linkUserToWorkspace(data: LinkUserToWorkspaceData): Promise<void> {
+  async linkUserToWorkspace(data: LinkUserToWorkspaceData): Promise<{ success: boolean; alreadyLinked?: boolean }> {
     await this.requireSuperAdmin()
 
     try {
@@ -352,7 +352,9 @@ class AdminService {
         .maybeSingle()
 
       if (existing) {
-        throw new Error('Usuário já está vinculado a este workspace')
+        // Retornar sucesso silencioso se já estiver vinculado (idempotência)
+        console.log('ℹ️ Usuário já está vinculado a este workspace, operação ignorada')
+        return { success: true, alreadyLinked: true }
       }
 
       // Criar vínculo
@@ -367,6 +369,7 @@ class AdminService {
       if (error) throw error
 
       console.log('✅ Usuário vinculado ao workspace')
+      return { success: true }
     } catch (error) {
       console.error('Error linking user to workspace:', error)
       throw error

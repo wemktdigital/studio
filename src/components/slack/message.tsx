@@ -32,6 +32,7 @@ import { useRightPane } from '@/hooks/use-right-pane';
 import { useAuthContext } from '@/components/providers/auth-provider';
 import { useAddThreadMessage, useThreadMessages } from '@/hooks/use-threads';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 
 // ✅ TIPOS INLINE para evitar problemas de importação
 interface LinkPreview {
@@ -57,6 +58,7 @@ export default function MessageItem({
   conversation,
   workspaceId
 }: MessageItemProps) {
+  const { copy } = useCopyToClipboard();
   // ✅ CORREÇÃO CRÍTICA: Se author estiver vazio mas authorId existir, buscar dos users
   // Isso corrige o problema do author: {} vindo do cache
   if ((!message.author || Object.keys(message.author).length === 0) && message.authorId) {
@@ -410,20 +412,22 @@ export default function MessageItem({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
-                  onClick={() => {
-                    // Copiar mensagem para clipboard
-                    navigator.clipboard.writeText(message.content);
-                    console.log('Mensagem copiada para clipboard');
+                  onClick={async () => {
+                    const success = await copy(message.content);
+                    if (success) {
+                      console.log('Mensagem copiada para clipboard');
+                    }
                   }}
                 >
                   Copiar mensagem
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => {
-                    // Copiar link da mensagem
+                  onClick={async () => {
                     const messageUrl = `${window.location.origin}${window.location.pathname}?message=${message.id}`;
-                    navigator.clipboard.writeText(messageUrl);
-                    console.log('Link da mensagem copiado');
+                    const success = await copy(messageUrl);
+                    if (success) {
+                      console.log('Link da mensagem copiado');
+                    }
                   }}
                 >
                   Copiar link

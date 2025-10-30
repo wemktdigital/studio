@@ -83,18 +83,14 @@ export function InvitePeopleDialog({
     }
   }
 
+  const { copy } = useCopyToClipboard()
+
   const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(inviteLink)
+    const success = await copy(inviteLink)
+    if (success) {
       toast({
         title: "Link copiado",
         description: "Link de convite copiado para a área de transferência.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível copiar o link.",
-        variant: "destructive"
       })
     }
   }

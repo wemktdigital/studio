@@ -163,12 +163,20 @@ export default function AdminDashboard() {
         return
       }
 
-      await adminService.linkUserToWorkspace(linkData)
+      const result = await adminService.linkUserToWorkspace(linkData)
       
-      toast({
-        title: "Sucesso!",
-        description: "Usuário vinculado ao workspace."
-      })
+      if (result.alreadyLinked) {
+        toast({
+          title: "Info",
+          description: "Este usuário já está vinculado a este workspace.",
+          variant: "default"
+        })
+      } else {
+        toast({
+          title: "Sucesso!",
+          description: "Usuário vinculado ao workspace."
+        })
+      }
 
       setIsLinkUserModalOpen(false)
       setLinkData({ user_id: '', workspace_id: '', role: 'member' })

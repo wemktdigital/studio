@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
+import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
 import { useInvites } from '@/hooks/use-invites'
 import { 
   Mail, 
@@ -98,20 +99,15 @@ export function InviteDashboard({ workspaceId, workspaceName }: InviteDashboardP
     }
   }
 
+  const { copy } = useCopyToClipboard()
+
   const handleCopyInviteLink = async (token: string) => {
     const inviteLink = `${window.location.origin}/invite/${token}`
-    
-    try {
-      await navigator.clipboard.writeText(inviteLink)
+    const success = await copy(inviteLink)
+    if (success) {
       toast({
         title: "Link copiado",
         description: "Link de convite copiado para a área de transferência.",
-      })
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível copiar o link.",
-        variant: "destructive"
       })
     }
   }
